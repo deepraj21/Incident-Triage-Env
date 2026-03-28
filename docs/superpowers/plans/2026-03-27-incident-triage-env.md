@@ -6,7 +6,7 @@
 
 **Architecture:** FastAPI server using OpenEnv's `create_app()` with a single `IncidentTriageEnv(Environment)` class. Scenario data lives in pre-crafted JSON fixtures. Rewards are computed by an `InvestigationRubric(Rubric)` per step and a standalone `DiagnosisScorer` at episode end. Custom `/tasks`, `/grader`, `/baseline` endpoints are added to the FastAPI app. All agent interaction uses WebSocket (`/ws`) for state persistence.
 
-**Tech Stack:** Python 3.10+, OpenEnv SDK (from `../OpenEnv`), FastAPI, Pydantic v2, uvicorn, OpenAI Python client, Docker, pytest
+**Tech Stack:** Python 3.10+, OpenEnv SDK (from `../OpenEnv`), FastAPI, Pydantic v2, uvicorn, Google Generative AI SDK (`google-genai`), Docker, pytest
 
 **Spec:** `docs/superpowers/specs/2026-03-26-incident-triage-env-design.md`
 
@@ -27,7 +27,7 @@ incident-triage-env/
 ├── pyproject.toml                  # Project config with dependencies
 ├── Dockerfile                      # Docker build for HF Spaces deployment
 ├── README.md                       # HF Space frontmatter + docs
-├── .env.example                    # Example env vars (OPENAI_API_KEY)
+├── .env.example                    # Example env vars (GEMINI_API_KEY, OPENROUTER_API_KEY)
 ├── models.py                       # All Pydantic models: enums, action, observation, state
 ├── client.py                       # EnvClient subclass for typed client access
 ├── server/
@@ -42,7 +42,7 @@ incident-triage-env/
 │       ├── task_medium.json        # Cascading dependency failure (5 services)
 │       └── task_hard.json          # Multi-signal cascade with red herrings (8 services)
 ├── scripts/
-│   └── baseline_inference.py       # OpenAI API client, runs all 3 tasks via WebSocket
+│   └── baseline_inference.py       # Gemini/OpenRouter API client, runs all 3 tasks via WebSocket
 └── tests/
     ├── __init__.py
     ├── test_models.py              # Model creation, validation, serialization
@@ -110,7 +110,8 @@ dev = [
     "httpx>=0.24.0",
 ]
 baseline = [
-    "openai>=1.0",
+    "google-genai>=1.0",
+    "openai>=1.0",  # for OpenRouter fallback (OpenAI-compatible API)
 ]
 ```
 
@@ -118,7 +119,10 @@ baseline = [
 
 ```bash
 # incident-triage-env/.env.example
-OPENAI_API_KEY=sk-your-key-here
+# Primary: Google Gemini (free tier via https://aistudio.google.com)
+GEMINI_API_KEY=your-gemini-api-key-here
+# Fallback: OpenRouter (free models via https://openrouter.ai)
+OPENROUTER_API_KEY=your-openrouter-key-here
 ```
 
 - [ ] **Step 5: Create empty __init__.py files**
@@ -1321,12 +1325,12 @@ def grade_episode(req: GraderRequest):
 
 @app.post("/baseline")
 async def run_baseline():
-    api_key = os.environ.get("OPENAI_API_KEY")
-    if not api_key:
-        raise HTTPException(status_code=500, detail="OPENAI_API_KEY not set")
-
-    # Import here to avoid requiring openai for server startup
-    from scripts.baseline_inference import run_baseline_all_tasks
+    # Import here to avoid requiring google-genai/openai for server startup
+    from scripts.baseline_inference import get_provider, run_baseline_all_tasks
+    try:
+        get_provider()  # Validate that an API key is configured
+    except RuntimeError as e:
+        raise HTTPException(status_code=500, detail=str(e))
     results = await run_baseline_all_tasks(base_url="http://localhost:8000")
     return results
 
@@ -1438,33 +1442,75 @@ git commit -m "feat: add IncidentTriageClient EnvClient subclass"
 
 - [ ] **Step 1: Implement baseline_inference.py**
 
-The script must:
-1. Read `OPENAI_API_KEY` from env
-2. Connect to environment via WebSocket for each task
-3. Use OpenAI chat completions to generate actions
-4. Parse JSON actions from LLM response
-5. Run until episode done or max steps
-6. Call `/grader` endpoint for final score
-7. Print results
+The script uses a provider abstraction to support multiple free LLM APIs:
 
-Key implementation details:
-- System prompt instructs the agent to respond with a single JSON action
-- Include the action schema in the system prompt
-- Parse JSON from LLM response (handle markdown code blocks)
-- Graceful error handling for JSON parse failures (retry with error feedback)
+**Provider priority (first available wins):**
+1. **Gemini** (`GEMINI_API_KEY`) — uses `google-genai` SDK with `response_mime_type="application/json"` for native structured output. Model: `gemini-2.0-flash`.
+2. **OpenRouter** (`OPENROUTER_API_KEY`) — uses the `openai` SDK with `base_url="https://openrouter.ai/api/v1"`. Model: `google/gemini-2.0-flash-exp:free` or `meta-llama/llama-3-70b-instruct` (free). Use `response_format={"type": "json_object"}`.
+3. Raise error if neither key is set.
+
+**Provider abstraction:**
+```python
+class LLMProvider:
+    """Abstract interface for LLM providers."""
+    async def generate(self, messages: list[dict], system: str) -> str:
+        """Send messages, return raw text response."""
+        raise NotImplementedError
+
+    @property
+    def model_name(self) -> str:
+        raise NotImplementedError
+
+class GeminiProvider(LLMProvider):
+    """Google Gemini via google-genai SDK."""
+    def __init__(self, api_key: str, model: str = "gemini-2.0-flash"):
+        from google import genai
+        self.client = genai.Client(api_key=api_key)
+        self.model = model
+
+    async def generate(self, messages, system):
+        # Use generate_content with response_mime_type="application/json"
+        ...
+
+class OpenRouterProvider(LLMProvider):
+    """OpenRouter via OpenAI-compatible API (free models)."""
+    def __init__(self, api_key: str, model: str = "google/gemini-2.0-flash-exp:free"):
+        from openai import AsyncOpenAI
+        self.client = AsyncOpenAI(base_url="https://openrouter.ai/api/v1", api_key=api_key)
+        self.model = model
+
+    async def generate(self, messages, system):
+        # Use chat.completions.create with response_format={"type": "json_object"}
+        ...
+
+def get_provider() -> LLMProvider:
+    if key := os.environ.get("GEMINI_API_KEY"):
+        return GeminiProvider(key)
+    if key := os.environ.get("OPENROUTER_API_KEY"):
+        return OpenRouterProvider(key)
+    raise RuntimeError("Set GEMINI_API_KEY or OPENROUTER_API_KEY")
+```
+
+The rest of the script logic is the same:
+1. Connect to environment via WebSocket for each task
+2. Use the provider to generate actions as JSON
+3. Parse JSON actions from LLM response (handle markdown code blocks)
+4. Run until episode done or max steps
+5. Call `/grader` endpoint for final score
+6. Print results
 - Expose `run_baseline_all_tasks(base_url)` as an async function for the `/baseline` endpoint
 
-- [ ] **Step 2: Test script runs (requires API key)**
+- [ ] **Step 2: Test script runs (requires API key — get free Gemini key from https://aistudio.google.com)**
 
 ```bash
-PYTHONPATH=.:../OpenEnv/src OPENAI_API_KEY=$OPENAI_API_KEY python scripts/baseline_inference.py
+PYTHONPATH=.:../OpenEnv/src GEMINI_API_KEY=$GEMINI_API_KEY python scripts/baseline_inference.py
 ```
 
 - [ ] **Step 3: Commit**
 
 ```bash
 git add scripts/baseline_inference.py
-git commit -m "feat: add baseline inference script using OpenAI API"
+git commit -m "feat: add baseline inference script using Gemini/OpenRouter (free APIs)"
 ```
 
 ---
@@ -1488,8 +1534,7 @@ RUN apt-get update && apt-get install -y git && rm -rf /var/lib/apt/lists/*
 COPY . .
 
 # Install the OpenEnv package and project dependencies
-RUN pip install --no-cache-dir -e . && \
-    pip install --no-cache-dir openai
+RUN pip install --no-cache-dir -e ".[baseline]"
 
 EXPOSE 8000
 
@@ -1577,7 +1622,7 @@ curl http://localhost:8000/tasks
 - [ ] **Step 4: Run baseline inference script**
 
 ```bash
-PYTHONPATH=.:../OpenEnv/src OPENAI_API_KEY=$OPENAI_API_KEY python scripts/baseline_inference.py
+PYTHONPATH=.:../OpenEnv/src GEMINI_API_KEY=$GEMINI_API_KEY python scripts/baseline_inference.py
 ```
 Record scores, update README.
 
@@ -1603,7 +1648,7 @@ Run the easy task twice with the same actions, verify the grader returns identic
 
 ```bash
 git add -A
-git commit -m "chore: final validation — all tests pass, Docker works, baseline recorded"
+git commit -m "chore: final validation — all tests pass, Docker works, baseline recorded (Gemini free tier)"
 ```
 
 ---
@@ -1625,7 +1670,7 @@ Check that the HF Space URL returns 200 on `/health` and responds to `/tasks`.
 - [ ] **Step 3: Run baseline against deployed Space**
 
 ```bash
-OPENAI_API_KEY=$OPENAI_API_KEY python scripts/baseline_inference.py --url https://<space-url>
+GEMINI_API_KEY=$GEMINI_API_KEY python scripts/baseline_inference.py --url https://<space-url>
 ```
 
 - [ ] **Step 4: Pre-submission checklist**

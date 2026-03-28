@@ -461,7 +461,7 @@ POST /grader
 ```
 
 ### `POST /baseline`
-Triggers the baseline inference script and returns scores for all 3 tasks. Requires `OPENAI_API_KEY` env var.
+Triggers the baseline inference script and returns scores for all 3 tasks. Requires `GEMINI_API_KEY` env var (free tier via Google AI Studio). Falls back to OpenRouter (`OPENROUTER_API_KEY`) if configured.
 ```json
 // Response:
 {
@@ -470,7 +470,7 @@ Triggers the baseline inference script and returns scores for all 3 tasks. Requi
     "medium_cascading_dependency": 0.51,
     "hard_multi_signal_cascade": 0.23
   },
-  "model": "gpt-4o",
+  "model": "gemini-2.0-flash",
   "total_steps_used": {"easy": 5, "medium": 9, "hard": 16}
 }
 ```
@@ -523,7 +523,11 @@ port: 8000
 
 ## Baseline Inference Script
 
-Uses OpenAI API client (`OPENAI_API_KEY` from env vars). Connects to environment via WebSocket.
+Uses Google Gemini API (`GEMINI_API_KEY` from env vars, free tier via Google AI Studio). Falls back to OpenRouter (`OPENROUTER_API_KEY`, free models) if Gemini is unavailable. Connects to environment via WebSocket.
+
+**LLM provider priority:**
+1. **Gemini 2.0 Flash** (primary) — free tier, native JSON schema support via `response_mime_type="application/json"`, strong reasoning
+2. **OpenRouter** (fallback) — OpenAI-compatible API, use free models like `meta-llama/llama-3-70b-instruct` or `google/gemini-2.0-flash-exp:free`
 
 ```
 System prompt: "You are an oncall engineer diagnosing a production incident.
