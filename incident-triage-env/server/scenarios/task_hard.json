@@ -1,0 +1,459 @@
+{
+  "task_id": "hard_multi_signal_cascade",
+  "task_name": "Multi-Signal Cascading Failure with Red Herrings",
+  "difficulty": "hard",
+  "step_budget": 20,
+  "alert": {
+    "service": "api-gateway",
+    "message": "Multiple service degradation — api-gateway and search-service reporting elevated 5xx rates since 16:45 UTC",
+    "severity": "critical",
+    "timestamp": "2026-03-26T16:45:00Z"
+  },
+  "services": {
+    "api-gateway": {
+      "dependencies": ["search-service", "order-service"],
+      "dependents": [],
+      "logs": [
+        {"timestamp": "2026-03-26T16:40:00Z", "severity": "info", "message": "All backends healthy — routing normally"},
+        {"timestamp": "2026-03-26T16:45:01Z", "severity": "error", "message": "Timeout calling search-service: GET /api/search — 15s deadline exceeded"},
+        {"timestamp": "2026-03-26T16:45:10Z", "severity": "error", "message": "Timeout calling search-service: GET /api/search/suggest — 15s deadline exceeded"},
+        {"timestamp": "2026-03-26T16:45:30Z", "severity": "warn", "message": "Backend search-service health check failing — 5 consecutive failures"},
+        {"timestamp": "2026-03-26T16:46:00Z", "severity": "error", "message": "Request failed: GET /api/products/search — 504 Gateway Timeout"},
+        {"timestamp": "2026-03-26T16:46:30Z", "severity": "warn", "message": "12% of requests returning 5xx — predominantly search and product listing routes"},
+        {"timestamp": "2026-03-26T16:47:00Z", "severity": "info", "message": "Order routes (order-service) responding normally — no degradation"},
+        {"timestamp": "2026-03-26T16:48:00Z", "severity": "warn", "message": "PagerDuty alert triggered — sustained 5xx rate > 10%"}
+      ],
+      "metrics": {
+        "error_rate": [
+          {"ts": "16:40", "val": 0.2}, {"ts": "16:42", "val": 0.2}, {"ts": "16:44", "val": 0.3},
+          {"ts": "16:45", "val": 12.5}, {"ts": "16:46", "val": 14.2}, {"ts": "16:47", "val": 13.8},
+          {"ts": "16:48", "val": 13.5}
+        ],
+        "latency_p99": [
+          {"ts": "16:40", "val": 300}, {"ts": "16:42", "val": 290}, {"ts": "16:44", "val": 310},
+          {"ts": "16:45", "val": 15000}, {"ts": "16:46", "val": 15000}, {"ts": "16:47", "val": 14500},
+          {"ts": "16:48", "val": 14800}
+        ],
+        "cpu": [
+          {"ts": "16:40", "val": 35}, {"ts": "16:42", "val": 36}, {"ts": "16:44", "val": 35},
+          {"ts": "16:45", "val": 50}, {"ts": "16:46", "val": 52}, {"ts": "16:47", "val": 51},
+          {"ts": "16:48", "val": 50}
+        ],
+        "memory": [
+          {"ts": "16:40", "val": 45}, {"ts": "16:42", "val": 45}, {"ts": "16:44", "val": 46},
+          {"ts": "16:45", "val": 48}, {"ts": "16:46", "val": 50}, {"ts": "16:47", "val": 51},
+          {"ts": "16:48", "val": 52}
+        ],
+        "connections": [
+          {"ts": "16:40", "val": 200}, {"ts": "16:42", "val": 205}, {"ts": "16:44", "val": 198},
+          {"ts": "16:45", "val": 350}, {"ts": "16:46", "val": 380}, {"ts": "16:47", "val": 375},
+          {"ts": "16:48", "val": 370}
+        ]
+      },
+      "deploys": [],
+      "code_snippets": {},
+      "status": {
+        "health": "degraded",
+        "uptime": "98.8%",
+        "active_alerts": ["HTTP 5xx spike", "search-service backend unhealthy"]
+      }
+    },
+    "search-service": {
+      "dependencies": ["cache-service", "product-service"],
+      "dependents": ["api-gateway"],
+      "logs": [
+        {"timestamp": "2026-03-26T16:40:00Z", "severity": "info", "message": "Search indexing healthy — serving queries normally"},
+        {"timestamp": "2026-03-26T16:43:00Z", "severity": "warn", "message": "Cache miss rate increasing — falling back to direct inventory lookups"},
+        {"timestamp": "2026-03-26T16:44:00Z", "severity": "warn", "message": "Search query latency elevated — cache-service returning stale/empty results"},
+        {"timestamp": "2026-03-26T16:44:30Z", "severity": "error", "message": "Timeout fetching inventory data from cache-service: GET /cache/inventory — 5s deadline exceeded"},
+        {"timestamp": "2026-03-26T16:45:00Z", "severity": "error", "message": "Search results incomplete — inventory availability data unavailable"},
+        {"timestamp": "2026-03-26T16:45:30Z", "severity": "error", "message": "Thread pool exhausted — all 50 threads blocked waiting for cache-service responses"},
+        {"timestamp": "2026-03-26T16:46:00Z", "severity": "error", "message": "Rejecting new search requests — 503 Service Unavailable"},
+        {"timestamp": "2026-03-26T16:47:00Z", "severity": "warn", "message": "Partial recovery — some cache responses returning, but latency still 10x normal"}
+      ],
+      "metrics": {
+        "error_rate": [
+          {"ts": "16:40", "val": 0.1}, {"ts": "16:42", "val": 0.1}, {"ts": "16:43", "val": 2.0},
+          {"ts": "16:44", "val": 15.0}, {"ts": "16:45", "val": 45.0}, {"ts": "16:46", "val": 60.0},
+          {"ts": "16:47", "val": 40.0}
+        ],
+        "latency_p99": [
+          {"ts": "16:40", "val": 100}, {"ts": "16:42", "val": 95}, {"ts": "16:43", "val": 800},
+          {"ts": "16:44", "val": 5000}, {"ts": "16:45", "val": 15000}, {"ts": "16:46", "val": 15000},
+          {"ts": "16:47", "val": 10000}
+        ],
+        "cpu": [
+          {"ts": "16:40", "val": 40}, {"ts": "16:42", "val": 42}, {"ts": "16:43", "val": 45},
+          {"ts": "16:44", "val": 55}, {"ts": "16:45", "val": 60}, {"ts": "16:46", "val": 58},
+          {"ts": "16:47", "val": 55}
+        ],
+        "memory": [
+          {"ts": "16:40", "val": 55}, {"ts": "16:42", "val": 55}, {"ts": "16:43", "val": 56},
+          {"ts": "16:44", "val": 58}, {"ts": "16:45", "val": 60}, {"ts": "16:46", "val": 62},
+          {"ts": "16:47", "val": 61}
+        ],
+        "connections": [
+          {"ts": "16:40", "val": 30}, {"ts": "16:42", "val": 32}, {"ts": "16:43", "val": 40},
+          {"ts": "16:44", "val": 50}, {"ts": "16:45", "val": 50}, {"ts": "16:46", "val": 50},
+          {"ts": "16:47", "val": 48}
+        ]
+      },
+      "deploys": [],
+      "code_snippets": {},
+      "status": {
+        "health": "unhealthy",
+        "uptime": "97.0%",
+        "active_alerts": ["High error rate", "Thread pool exhaustion"]
+      }
+    },
+    "inventory-service": {
+      "dependencies": ["database"],
+      "dependents": ["cache-service"],
+      "logs": [
+        {"timestamp": "2026-03-26T14:45:00Z", "severity": "info", "message": "Deploy v3.8.0 complete — new inventory aggregation pipeline active"},
+        {"timestamp": "2026-03-26T15:00:00Z", "severity": "info", "message": "Inventory sync running — processing 50k SKUs"},
+        {"timestamp": "2026-03-26T15:30:00Z", "severity": "info", "message": "GC pause: 120ms (minor) — within normal range"},
+        {"timestamp": "2026-03-26T16:00:00Z", "severity": "warn", "message": "GC pause: 850ms (major) — heap usage 78%"},
+        {"timestamp": "2026-03-26T16:15:00Z", "severity": "warn", "message": "GC pause: 1200ms (major) — heap usage 85%. Memory growing faster than expected"},
+        {"timestamp": "2026-03-26T16:30:00Z", "severity": "warn", "message": "GC pause: 2100ms (major) — heap usage 91%. Potential memory leak detected"},
+        {"timestamp": "2026-03-26T16:35:00Z", "severity": "error", "message": "Response time degradation: /api/inventory/batch averaging 8s (normal: 200ms)"},
+        {"timestamp": "2026-03-26T16:40:00Z", "severity": "error", "message": "GC pause: 3500ms (full GC) — heap usage 95%. Service near OOM"},
+        {"timestamp": "2026-03-26T16:42:00Z", "severity": "error", "message": "OOM warning: heap usage 97% — JVM will likely OOM within 30 minutes at current rate"},
+        {"timestamp": "2026-03-26T16:44:00Z", "severity": "error", "message": "Multiple request timeouts — inventory queries taking 15s+ due to GC pressure"},
+        {"timestamp": "2026-03-26T16:45:00Z", "severity": "error", "message": "Downstream cache-service timing out on inventory refreshes — serving stale data"},
+        {"timestamp": "2026-03-26T16:46:00Z", "severity": "error", "message": "GC pause: 5200ms (full GC) — heap usage 98%. Service effectively frozen"}
+      ],
+      "metrics": {
+        "error_rate": [
+          {"ts": "15:00", "val": 0.0}, {"ts": "15:30", "val": 0.0}, {"ts": "16:00", "val": 0.5},
+          {"ts": "16:15", "val": 2.0}, {"ts": "16:30", "val": 8.0}, {"ts": "16:35", "val": 15.0},
+          {"ts": "16:40", "val": 35.0}, {"ts": "16:45", "val": 55.0}
+        ],
+        "latency_p99": [
+          {"ts": "15:00", "val": 200}, {"ts": "15:30", "val": 220}, {"ts": "16:00", "val": 1050},
+          {"ts": "16:15", "val": 1400}, {"ts": "16:30", "val": 2300}, {"ts": "16:35", "val": 8000},
+          {"ts": "16:40", "val": 12000}, {"ts": "16:45", "val": 15000}
+        ],
+        "cpu": [
+          {"ts": "15:00", "val": 30}, {"ts": "15:30", "val": 35}, {"ts": "16:00", "val": 55},
+          {"ts": "16:15", "val": 65}, {"ts": "16:30", "val": 75}, {"ts": "16:35", "val": 82},
+          {"ts": "16:40", "val": 90}, {"ts": "16:45", "val": 95}
+        ],
+        "memory": [
+          {"ts": "15:00", "val": 55}, {"ts": "15:30", "val": 65}, {"ts": "16:00", "val": 78},
+          {"ts": "16:15", "val": 85}, {"ts": "16:30", "val": 91}, {"ts": "16:35", "val": 93},
+          {"ts": "16:40", "val": 95}, {"ts": "16:45", "val": 98}
+        ],
+        "connections": [
+          {"ts": "15:00", "val": 20}, {"ts": "15:30", "val": 22}, {"ts": "16:00", "val": 25},
+          {"ts": "16:15", "val": 28}, {"ts": "16:30", "val": 30}, {"ts": "16:35", "val": 30},
+          {"ts": "16:40", "val": 30}, {"ts": "16:45", "val": 30}
+        ]
+      },
+      "deploys": [
+        {
+          "timestamp": "2026-03-26T14:45:00Z",
+          "author": "dev-charlie",
+          "diff_summary": "v3.8.0: New inventory aggregation pipeline. Refactored InventoryAggregator to batch-process SKU updates. Added in-memory result cache for aggregation results. Changed: results stored in ArrayList instead of streaming to reduce DB round-trips."
+        }
+      ],
+      "code_snippets": {
+        "InventoryAggregator.java": "public class InventoryAggregator {\n    // BUG: resultCache grows unbounded — never cleared between batches\n    private final List<AggregationResult> resultCache = new ArrayList<>();\n\n    public void processBatch(List<SKU> skus) {\n        for (SKU sku : skus) {\n            AggregationResult result = aggregate(sku);\n            resultCache.add(result);  // Leak: accumulates across all batches\n            emit(result);\n        }\n        // Missing: resultCache.clear();\n    }\n\n    public List<AggregationResult> getCachedResults() {\n        return Collections.unmodifiableList(resultCache);\n    }\n}",
+        "recent_diff": "- // Stream results directly to DB\n- public void processBatch(List<SKU> skus) {\n-     for (SKU sku : skus) {\n-         AggregationResult result = aggregate(sku);\n-         db.write(result);  // Write immediately\n-     }\n- }\n+ // Cache results in memory for batch write\n+ private final List<AggregationResult> resultCache = new ArrayList<>();\n+ \n+ public void processBatch(List<SKU> skus) {\n+     for (SKU sku : skus) {\n+         AggregationResult result = aggregate(sku);\n+         resultCache.add(result);  // Accumulate for batch\n+         emit(result);\n+     }\n+     // TODO: clear cache after batch (forgot this!)\n+ }"
+      },
+      "status": {
+        "health": "unhealthy",
+        "uptime": "95.0%",
+        "active_alerts": ["High memory usage", "GC pressure", "Response time degradation"]
+      }
+    },
+    "cache-service": {
+      "dependencies": ["inventory-service"],
+      "dependents": ["search-service"],
+      "logs": [
+        {"timestamp": "2026-03-26T16:30:00Z", "severity": "info", "message": "Cache refresh cycle starting — fetching latest inventory data"},
+        {"timestamp": "2026-03-26T16:35:00Z", "severity": "warn", "message": "Inventory refresh timeout — inventory-service response took 12s (limit: 5s)"},
+        {"timestamp": "2026-03-26T16:36:00Z", "severity": "warn", "message": "Serving stale inventory data — last successful refresh was 30 min ago"},
+        {"timestamp": "2026-03-26T16:40:00Z", "severity": "warn", "message": "Aggressive eviction triggered — TTL expired entries being purged, cache fill rate: 45%"},
+        {"timestamp": "2026-03-26T16:42:00Z", "severity": "warn", "message": "Cache fill rate: 30% — many entries evicted, high miss rate expected"},
+        {"timestamp": "2026-03-26T16:44:00Z", "severity": "error", "message": "Inventory refresh failed — inventory-service connection timeout after 3 retries"},
+        {"timestamp": "2026-03-26T16:45:00Z", "severity": "warn", "message": "Cache miss rate: 65% — downstream search-service will experience elevated latency"},
+        {"timestamp": "2026-03-26T16:46:00Z", "severity": "error", "message": "Cache fill rate: 18% — operating in degraded mode, most reads are misses"}
+      ],
+      "metrics": {
+        "error_rate": [
+          {"ts": "16:30", "val": 0.1}, {"ts": "16:35", "val": 1.0}, {"ts": "16:40", "val": 5.0},
+          {"ts": "16:42", "val": 12.0}, {"ts": "16:44", "val": 20.0}, {"ts": "16:45", "val": 25.0},
+          {"ts": "16:46", "val": 30.0}
+        ],
+        "latency_p99": [
+          {"ts": "16:30", "val": 3}, {"ts": "16:35", "val": 5}, {"ts": "16:40", "val": 50},
+          {"ts": "16:42", "val": 200}, {"ts": "16:44", "val": 500}, {"ts": "16:45", "val": 800},
+          {"ts": "16:46", "val": 1000}
+        ],
+        "cpu": [
+          {"ts": "16:30", "val": 15}, {"ts": "16:35", "val": 18}, {"ts": "16:40", "val": 25},
+          {"ts": "16:42", "val": 30}, {"ts": "16:44", "val": 35}, {"ts": "16:45", "val": 38},
+          {"ts": "16:46", "val": 40}
+        ],
+        "memory": [
+          {"ts": "16:30", "val": 70}, {"ts": "16:35", "val": 68}, {"ts": "16:40", "val": 55},
+          {"ts": "16:42", "val": 45}, {"ts": "16:44", "val": 38}, {"ts": "16:45", "val": 32},
+          {"ts": "16:46", "val": 28}
+        ],
+        "connections": [
+          {"ts": "16:30", "val": 50}, {"ts": "16:35", "val": 55}, {"ts": "16:40", "val": 60},
+          {"ts": "16:42", "val": 65}, {"ts": "16:44", "val": 70}, {"ts": "16:45", "val": 75},
+          {"ts": "16:46", "val": 80}
+        ]
+      },
+      "deploys": [],
+      "code_snippets": {},
+      "status": {
+        "health": "degraded",
+        "uptime": "99.0%",
+        "active_alerts": ["High cache miss rate", "Inventory refresh failures"]
+      }
+    },
+    "order-service": {
+      "dependencies": ["database", "message-queue"],
+      "dependents": ["api-gateway"],
+      "logs": [
+        {"timestamp": "2026-03-26T16:15:00Z", "severity": "info", "message": "Deploy v5.2.1 starting — rolling update in progress"},
+        {"timestamp": "2026-03-26T16:16:00Z", "severity": "info", "message": "Deploy v5.2.1 complete — all pods healthy. Change: updated order confirmation email template"},
+        {"timestamp": "2026-03-26T16:30:00Z", "severity": "info", "message": "Order processing nominal — 245 orders/min"},
+        {"timestamp": "2026-03-26T16:45:00Z", "severity": "info", "message": "Order processing nominal — 238 orders/min"},
+        {"timestamp": "2026-03-26T16:46:00Z", "severity": "info", "message": "Health check passed — all dependencies responsive"}
+      ],
+      "metrics": {
+        "error_rate": [
+          {"ts": "16:15", "val": 0.5}, {"ts": "16:16", "val": 0.1}, {"ts": "16:30", "val": 0.1},
+          {"ts": "16:45", "val": 0.1}, {"ts": "16:46", "val": 0.1}
+        ],
+        "latency_p99": [
+          {"ts": "16:15", "val": 500}, {"ts": "16:16", "val": 150}, {"ts": "16:30", "val": 140},
+          {"ts": "16:45", "val": 145}, {"ts": "16:46", "val": 142}
+        ],
+        "cpu": [
+          {"ts": "16:15", "val": 45}, {"ts": "16:16", "val": 30}, {"ts": "16:30", "val": 28},
+          {"ts": "16:45", "val": 29}, {"ts": "16:46", "val": 28}
+        ],
+        "memory": [
+          {"ts": "16:15", "val": 50}, {"ts": "16:16", "val": 48}, {"ts": "16:30", "val": 48},
+          {"ts": "16:45", "val": 49}, {"ts": "16:46", "val": 49}
+        ],
+        "connections": [
+          {"ts": "16:15", "val": 40}, {"ts": "16:16", "val": 35}, {"ts": "16:30", "val": 34},
+          {"ts": "16:45", "val": 35}, {"ts": "16:46", "val": 34}
+        ]
+      },
+      "deploys": [
+        {
+          "timestamp": "2026-03-26T16:15:00Z",
+          "author": "dev-diana",
+          "diff_summary": "v5.2.1: Updated order confirmation email template — cosmetic change only, no business logic modifications. Updated HTML template and subject line."
+        }
+      ],
+      "code_snippets": {
+        "OrderConfirmationEmail.java": "public class OrderConfirmationEmail {\n    private static final String SUBJECT = \"Your Order is Confirmed! #%s\";\n    \n    public Email buildConfirmation(Order order) {\n        String subject = String.format(SUBJECT, order.getId());\n        String body = templateEngine.render(\"order-confirm-v2\", order);\n        return new Email(order.getCustomerEmail(), subject, body);\n    }\n}",
+        "recent_diff": "- private static final String SUBJECT = \"Order Confirmation #%s\";\n+ private static final String SUBJECT = \"Your Order is Confirmed! #%s\";\n- String body = templateEngine.render(\"order-confirm\", order);\n+ String body = templateEngine.render(\"order-confirm-v2\", order);"
+      },
+      "status": {
+        "health": "healthy",
+        "uptime": "99.95%",
+        "active_alerts": []
+      }
+    },
+    "product-service": {
+      "dependencies": ["database"],
+      "dependents": ["search-service"],
+      "logs": [
+        {"timestamp": "2026-03-26T16:40:00Z", "severity": "info", "message": "Product catalog serving normally — 1.2k queries/min"},
+        {"timestamp": "2026-03-26T16:45:00Z", "severity": "info", "message": "Product catalog serving normally — 1.1k queries/min"},
+        {"timestamp": "2026-03-26T16:46:00Z", "severity": "info", "message": "All product data endpoints responding < 50ms"}
+      ],
+      "metrics": {
+        "error_rate": [
+          {"ts": "16:40", "val": 0.0}, {"ts": "16:42", "val": 0.0}, {"ts": "16:44", "val": 0.0},
+          {"ts": "16:45", "val": 0.0}, {"ts": "16:46", "val": 0.0}
+        ],
+        "latency_p99": [
+          {"ts": "16:40", "val": 45}, {"ts": "16:42", "val": 42}, {"ts": "16:44", "val": 48},
+          {"ts": "16:45", "val": 46}, {"ts": "16:46", "val": 44}
+        ],
+        "cpu": [
+          {"ts": "16:40", "val": 18}, {"ts": "16:42", "val": 19}, {"ts": "16:44", "val": 18},
+          {"ts": "16:45", "val": 20}, {"ts": "16:46", "val": 19}
+        ],
+        "memory": [
+          {"ts": "16:40", "val": 35}, {"ts": "16:42", "val": 35}, {"ts": "16:44", "val": 36},
+          {"ts": "16:45", "val": 36}, {"ts": "16:46", "val": 36}
+        ],
+        "connections": [
+          {"ts": "16:40", "val": 15}, {"ts": "16:42", "val": 16}, {"ts": "16:44", "val": 15},
+          {"ts": "16:45", "val": 17}, {"ts": "16:46", "val": 16}
+        ]
+      },
+      "deploys": [],
+      "code_snippets": {},
+      "status": {
+        "health": "healthy",
+        "uptime": "99.99%",
+        "active_alerts": []
+      }
+    },
+    "database": {
+      "dependencies": [],
+      "dependents": ["inventory-service", "order-service", "product-service"],
+      "logs": [
+        {"timestamp": "2026-03-26T16:30:00Z", "severity": "info", "message": "Database cluster healthy — primary and 2 replicas in sync"},
+        {"timestamp": "2026-03-26T16:40:00Z", "severity": "info", "message": "Slow query log: 2 queries > 500ms (inventory_service queries)"},
+        {"timestamp": "2026-03-26T16:45:00Z", "severity": "info", "message": "Connection pool: 45/200 active — well within limits"},
+        {"timestamp": "2026-03-26T16:46:00Z", "severity": "info", "message": "Replication lag: 0.5ms — within SLA"}
+      ],
+      "metrics": {
+        "error_rate": [
+          {"ts": "16:30", "val": 0.0}, {"ts": "16:40", "val": 0.0}, {"ts": "16:45", "val": 0.0},
+          {"ts": "16:46", "val": 0.0}
+        ],
+        "latency_p99": [
+          {"ts": "16:30", "val": 10}, {"ts": "16:40", "val": 12}, {"ts": "16:45", "val": 11},
+          {"ts": "16:46", "val": 10}
+        ],
+        "cpu": [
+          {"ts": "16:30", "val": 20}, {"ts": "16:40", "val": 22}, {"ts": "16:45", "val": 21},
+          {"ts": "16:46", "val": 20}
+        ],
+        "memory": [
+          {"ts": "16:30", "val": 55}, {"ts": "16:40", "val": 56}, {"ts": "16:45", "val": 56},
+          {"ts": "16:46", "val": 56}
+        ],
+        "connections": [
+          {"ts": "16:30", "val": 40}, {"ts": "16:40", "val": 42}, {"ts": "16:45", "val": 45},
+          {"ts": "16:46", "val": 44}
+        ]
+      },
+      "deploys": [],
+      "code_snippets": {},
+      "status": {
+        "health": "healthy",
+        "uptime": "99.99%",
+        "active_alerts": []
+      }
+    },
+    "message-queue": {
+      "dependencies": [],
+      "dependents": ["order-service"],
+      "logs": [
+        {"timestamp": "2026-03-26T16:40:00Z", "severity": "info", "message": "Queue depth: 12 messages — processing normally"},
+        {"timestamp": "2026-03-26T16:45:00Z", "severity": "info", "message": "Queue depth: 8 messages — processing normally"},
+        {"timestamp": "2026-03-26T16:46:00Z", "severity": "info", "message": "Consumer group healthy — all 4 consumers active"}
+      ],
+      "metrics": {
+        "error_rate": [
+          {"ts": "16:40", "val": 0.0}, {"ts": "16:42", "val": 0.0}, {"ts": "16:44", "val": 0.0},
+          {"ts": "16:45", "val": 0.0}, {"ts": "16:46", "val": 0.0}
+        ],
+        "latency_p99": [
+          {"ts": "16:40", "val": 5}, {"ts": "16:42", "val": 4}, {"ts": "16:44", "val": 5},
+          {"ts": "16:45", "val": 4}, {"ts": "16:46", "val": 5}
+        ],
+        "cpu": [
+          {"ts": "16:40", "val": 8}, {"ts": "16:42", "val": 9}, {"ts": "16:44", "val": 8},
+          {"ts": "16:45", "val": 9}, {"ts": "16:46", "val": 8}
+        ],
+        "memory": [
+          {"ts": "16:40", "val": 25}, {"ts": "16:42", "val": 25}, {"ts": "16:44", "val": 26},
+          {"ts": "16:45", "val": 25}, {"ts": "16:46", "val": 25}
+        ],
+        "connections": [
+          {"ts": "16:40", "val": 8}, {"ts": "16:42", "val": 8}, {"ts": "16:44", "val": 8},
+          {"ts": "16:45", "val": 8}, {"ts": "16:46", "val": 8}
+        ]
+      },
+      "deploys": [],
+      "code_snippets": {},
+      "status": {
+        "health": "healthy",
+        "uptime": "99.99%",
+        "active_alerts": []
+      }
+    }
+  },
+  "evidence_labels": {
+    "api-gateway": {
+      "query_logs": "causal_chain",
+      "query_metrics": "causal_chain",
+      "check_deploys": "contextual",
+      "trace_dependencies": "causal_chain",
+      "check_status": "contextual",
+      "inspect_code": "contextual"
+    },
+    "search-service": {
+      "query_logs": "causal_chain",
+      "query_metrics": "causal_chain",
+      "check_deploys": "contextual",
+      "trace_dependencies": "causal_chain",
+      "check_status": "contextual",
+      "inspect_code": "contextual"
+    },
+    "inventory-service": {
+      "query_logs": "direct_evidence",
+      "query_metrics": "direct_evidence",
+      "check_deploys": "direct_evidence",
+      "trace_dependencies": "contextual",
+      "check_status": "direct_evidence",
+      "inspect_code": "direct_evidence"
+    },
+    "cache-service": {
+      "query_logs": "causal_chain",
+      "query_metrics": "causal_chain",
+      "check_deploys": "contextual",
+      "trace_dependencies": "causal_chain",
+      "check_status": "contextual",
+      "inspect_code": "contextual"
+    },
+    "order-service": {
+      "query_logs": "contextual",
+      "query_metrics": "contextual",
+      "check_deploys": "contextual",
+      "trace_dependencies": "contextual",
+      "check_status": "contextual",
+      "inspect_code": "contextual"
+    },
+    "product-service": {
+      "query_logs": "contextual",
+      "query_metrics": "contextual",
+      "check_deploys": "contextual",
+      "trace_dependencies": "contextual",
+      "check_status": "contextual",
+      "inspect_code": "contextual"
+    },
+    "database": {
+      "query_logs": "contextual",
+      "query_metrics": "contextual",
+      "check_deploys": "contextual",
+      "trace_dependencies": "contextual",
+      "check_status": "contextual",
+      "inspect_code": "contextual"
+    },
+    "message-queue": {
+      "query_logs": "contextual",
+      "query_metrics": "contextual",
+      "check_deploys": "contextual",
+      "trace_dependencies": "contextual",
+      "check_status": "contextual",
+      "inspect_code": "contextual"
+    }
+  },
+  "ground_truth": {
+    "root_cause_service": "inventory-service",
+    "root_cause_category": "resource_exhaustion",
+    "remediation": "restart_service",
+    "causal_chain": ["inventory-service", "cache-service", "search-service", "api-gateway"],
+    "red_herrings": ["order-service", "cache-service"],
+    "evidence_services": ["inventory-service", "cache-service", "search-service", "api-gateway"],
+    "anomalous_services": ["api-gateway", "search-service", "inventory-service", "cache-service", "order-service"],
+    "failure_family": "capacity-related"
+  }
+}
