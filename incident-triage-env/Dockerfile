@@ -8,7 +8,7 @@ RUN apt-get update && apt-get install -y git && rm -rf /var/lib/apt/lists/*
 # Copy project files
 COPY . .
 
-# Install the OpenEnv package and project dependencies
+# Install the project and dependencies
 RUN pip install --no-cache-dir -e ".[baseline]"
 
 EXPOSE 8000

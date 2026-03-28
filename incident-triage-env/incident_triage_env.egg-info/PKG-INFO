@@ -1,0 +1,17 @@
+Metadata-Version: 2.4
+Name: incident-triage-env
+Version: 0.1.0
+Summary: OpenEnv environment for production incident triage
+Requires-Python: >=3.10
+Requires-Dist: openenv-core
+Requires-Dist: fastapi>=0.100.0
+Requires-Dist: uvicorn[standard]>=0.20.0
+Requires-Dist: pydantic>=2.0
+Requires-Dist: websockets>=11.0
+Provides-Extra: dev
+Requires-Dist: pytest>=7.0; extra == "dev"
+Requires-Dist: pytest-asyncio>=0.21.0; extra == "dev"
+Requires-Dist: httpx>=0.24.0; extra == "dev"
+Provides-Extra: baseline
+Requires-Dist: google-genai>=1.0; extra == "baseline"
+Requires-Dist: openai>=1.0; extra == "baseline"

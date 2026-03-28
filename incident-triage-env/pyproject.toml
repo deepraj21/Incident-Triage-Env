@@ -1,6 +1,6 @@
 [build-system]
 requires = ["setuptools>=68.0"]
-build-backend = "setuptools.backends._legacy:_Backend"
+build-backend = "setuptools.build_meta"
 
 [project]
 name = "incident-triage-env"
@@ -8,7 +8,7 @@ version = "0.1.0"
 description = "OpenEnv environment for production incident triage"
 requires-python = ">=3.10"
 dependencies = [
-    "openenv",
+    "openenv-core",
     "fastapi>=0.100.0",
     "uvicorn[standard]>=0.20.0",
     "pydantic>=2.0",
@@ -25,3 +25,6 @@ baseline = [
     "google-genai>=1.0",
     "openai>=1.0",
 ]
+
+[project.scripts]
+server = "server.app:main"

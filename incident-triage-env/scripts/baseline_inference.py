@@ -50,7 +50,7 @@ class LLMProvider(ABC):
 
 
 class GeminiProvider(LLMProvider):
-    def __init__(self, api_key: str, model: str = "gemini-2.0-flash"):
+    def __init__(self, api_key: str, model: str = "gemini-3-flash-preview"):
         self._api_key = api_key
         self._model = model
 
@@ -83,7 +83,7 @@ class GeminiProvider(LLMProvider):
 
 
 class OpenRouterProvider(LLMProvider):
-    def __init__(self, api_key: str, model: str = "google/gemini-2.0-flash-exp:free"):
+    def __init__(self, api_key: str, model: str = "minimax/minimax-m2.5:free"):
         self._api_key = api_key
         self._model = model
 
