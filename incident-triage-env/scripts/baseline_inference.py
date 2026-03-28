@@ -83,7 +83,7 @@ class GeminiProvider(LLMProvider):
 
 
 class OpenRouterProvider(LLMProvider):
-    def __init__(self, api_key: str, model: str = "minimax/minimax-m2.5:free"):
+    def __init__(self, api_key: str, model: str = "stepfun/step-3.5-flash:free"):
         self._api_key = api_key
         self._model = model
 
