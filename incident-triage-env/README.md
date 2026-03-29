@@ -179,9 +179,23 @@ asyncio.run(main())
 ## Baseline
 
 ```bash
-# Get a free API key from https://aistudio.google.com
+# Hackathon-compliant inference (uses OpenAI Client with required env vars)
+API_BASE_URL=https://openrouter.ai/api/v1 \
+MODEL_NAME=google/gemini-2.0-flash-exp:free \
+HF_TOKEN=your-api-key \
+PYTHONPATH=. python inference.py
+
+# Or with Gemini directly
 GEMINI_API_KEY=your-key PYTHONPATH=. python scripts/baseline_inference.py
 ```
+
+### Baseline Scores (`stepfun/step-3.5-flash:free` via OpenRouter)
+
+| Task | Score | Steps | Budget |
+|------|-------|-------|--------|
+| easy_single_service_failure | 0.67 | 4 | 10 |
+| medium_cascading_dependency | 0.49 | 10 | 15 |
+| hard_multi_signal_cascade | 0.43 | 6 | 20 |
 
 ## Reward Function
 
@@ -245,6 +259,7 @@ incident-triage-env/
 ├── pyproject.toml            # Dependencies and entry points
 ├── Dockerfile                # Docker deployment
 ├── README.md                 # This file (HF Space metadata in frontmatter)
+├── inference.py              # Hackathon-compliant inference (OpenAI Client)
 ├── models.py                 # Pydantic models: Action, Observation, State
 ├── client.py                 # OpenEnv client wrapper
 ├── server/
