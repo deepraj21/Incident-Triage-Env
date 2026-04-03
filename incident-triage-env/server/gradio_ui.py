@@ -313,11 +313,11 @@ Production incident response is a high-stakes, time-critical task requiring stru
 
 | Task | Score | Steps Used | Budget |
 |------|-------|------------|--------|
-| Easy | 0.67 | 5 | 10 |
-| Medium | 0.35 | 8 | 15 |
-| Hard | 0.56 | 14 | 20 |
+| Easy | 0.56 | 5 | 10 |
+| Medium | 0.54 | 9 | 15 |
+| Hard | 0.66 | 10 | 20 |
 
-*Scores from `stepfun/step-3.5-flash:free` via OpenRouter. Stronger models achieve higher scores.*
+*Scores from `google/gemini-2.0-flash-001` via OpenRouter. Average: 0.59. Stronger models achieve higher scores.*
 
 #### Technical Details
 - **OpenEnv spec**: Full `step()` / `reset()` / `state()` API + WebSocket + MCP endpoint

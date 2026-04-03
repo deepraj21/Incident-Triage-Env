@@ -28,7 +28,7 @@ from openai import AsyncOpenAI
 # --- Configuration from env vars (hackathon-required) ---
 
 API_BASE_URL = os.environ.get("API_BASE_URL", "https://openrouter.ai/api/v1")
-MODEL_NAME = os.environ.get("MODEL_NAME", "google/gemini-2.0-flash-exp:free")
+MODEL_NAME = os.environ.get("MODEL_NAME", "google/gemini-2.0-flash-001")
 HF_TOKEN = os.environ.get("HF_TOKEN", "")
 
 # Environment server URL
@@ -66,10 +66,15 @@ SYSTEM_PROMPT = """You are an expert SRE/oncall engineer diagnosing a production
 INVESTIGATION STRATEGY (follow this order):
 1. START with the alerted service: check_status to see health + active alerts
 2. TRACE DEPENDENCIES: trace_dependencies on the alerted service to find upstream/downstream services
-3. FOLLOW THE CHAIN: If the alerted service depends on a degraded upstream, investigate that upstream next
-4. GATHER EVIDENCE: For each suspicious service, use query_logs (with severity=error) and check_deploys
-5. DEEP DIVE: Use query_metrics and inspect_code on the most suspicious service (the one with errors/deploys)
-6. SUBMIT DIAGNOSIS: Once you have enough evidence, submit your diagnosis
+3. FOLLOW THE CHAIN UPSTREAM: If a service has errors caused by an upstream dependency, ALWAYS trace_dependencies on that upstream service too. Keep going until you find the DEEPEST upstream service that is the actual root cause. The root cause is NEVER a service that is just relaying errors from upstream — it's the one where the failure ORIGINATES.
+4. GATHER EVIDENCE on the deepest root cause: query_logs (severity=error), check_deploys, query_metrics
+5. SUBMIT DIAGNOSIS: Once you've identified the deepest root cause, submit immediately
+
+CRITICAL: THE ROOT CAUSE IS ALWAYS THE DEEPEST UPSTREAM SERVICE IN THE FAILURE CHAIN.
+- If service A calls service B which calls service C, and C has a config error causing B to fail causing A to fail, the root cause is C — NOT A or B.
+- "Connection refused" or "timeout calling X" means X (or something X depends on) is the root cause, NOT the service experiencing the timeout.
+- When you see a service failing because of an upstream dependency, ALWAYS trace that upstream's dependencies too. Do not stop at the first upstream — go deeper.
+- When logs mention another service name (e.g., "connection to auth-db refused"), investigate THAT service.
 
 KEY RULES:
 - Follow dependency chains UPSTREAM to find root cause (symptoms appear downstream, causes are upstream)
@@ -77,18 +82,19 @@ KEY RULES:
 - Look for: recent deploys, config changes, memory leaks, connection exhaustion
 - Do NOT query the same service more than 3 times (penalty for redundancy)
 - Do NOT waste steps on healthy services that show no anomalies
-- Submit diagnosis when you have: identified the root cause service, understood the failure category, and know the remediation
 - You MUST submit_diagnosis before running out of steps
+- When in doubt, the root cause is the service furthest upstream in the dependency chain that shows errors
 
 Root cause categories: bad_deploy, resource_exhaustion, dependency_failure, config_change, traffic_spike, data_corruption
 Remediations: rollback_deploy (for bad deploys), scale_up (for traffic), restart_service (for resource exhaustion/memory leaks), fix_config (for config changes), enable_rate_limiting (for traffic spikes), failover_to_backup (for dependency failures)
 
 MATCHING GUIDE:
 - NullPointerException after a deploy -> bad_deploy -> rollback_deploy
-- max_connections changed / config reload -> config_change -> fix_config
+- max_connections changed / config reload / connection pool / pool size -> config_change -> fix_config
 - Memory leak / OOM / GC pressure / heap growing -> resource_exhaustion -> restart_service
 - Upstream service down -> dependency_failure -> failover_to_backup
 - Traffic surge / request spike -> traffic_spike -> enable_rate_limiting
+- "connection refused" to a database -> check that database service for config_change or resource_exhaustion
 
 Respond with ONLY a single JSON action object. No explanation, no markdown, just JSON.
 
