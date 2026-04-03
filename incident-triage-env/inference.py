@@ -274,10 +274,17 @@ TASK_IDS = [
 async def main():
     """Run baseline inference on all tasks using OpenAI Client."""
     # Validate required env vars
-    api_key = HF_TOKEN or os.environ.get("OPENROUTER_API_KEY") or os.environ.get("GEMINI_API_KEY") or os.environ.get("API_KEY")
+    # Pick the right API key based on which API we're talking to
+    if "openrouter" in API_BASE_URL.lower():
+        api_key = os.environ.get("OPENROUTER_API_KEY") or HF_TOKEN
+    elif "huggingface" in API_BASE_URL.lower():
+        api_key = HF_TOKEN or os.environ.get("API_KEY")
+    else:
+        api_key = HF_TOKEN or os.environ.get("OPENROUTER_API_KEY") or os.environ.get("GEMINI_API_KEY") or os.environ.get("API_KEY")
+
     if not api_key:
-        print("ERROR: Set HF_TOKEN (or API_BASE_URL + HF_TOKEN) for LLM access.")
-        print("  Example: HF_TOKEN=your-key python inference.py")
+        print("ERROR: Set HF_TOKEN (or OPENROUTER_API_KEY) for LLM access.")
+        print("  Example: OPENROUTER_API_KEY=your-key python inference.py")
         sys.exit(1)
 
     client = AsyncOpenAI(
