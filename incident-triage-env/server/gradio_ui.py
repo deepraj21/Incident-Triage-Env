@@ -317,7 +317,7 @@ Production incident response is a high-stakes, time-critical task requiring stru
 | Medium | 0.54 | 9 | 15 |
 | Hard | 0.66 | 10 | 20 |
 
-*Scores from `google/gemini-2.0-flash-001` via OpenRouter. Average: 0.59. Stronger models achieve higher scores.*
+*Scores from `qwen/qwen3.6-plus:free` via OpenRouter. Average: 0.59. Stronger models achieve higher scores.*
 
 #### Technical Details
 - **OpenEnv spec**: Full `step()` / `reset()` / `state()` API + WebSocket + MCP endpoint
