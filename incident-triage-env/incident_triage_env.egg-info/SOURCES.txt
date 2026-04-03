@@ -11,6 +11,7 @@ server/app.py
 server/environment.py
 server/episode_store.py
 server/grader.py
+server/gradio_ui.py
 server/scenario_loader.py
 tests/test_environment.py
 tests/test_grader.py

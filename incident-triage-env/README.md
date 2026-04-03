@@ -2,7 +2,7 @@
 title: Incident Triage Environment
 emoji: "\U0001F6A8"
 colorFrom: red
-colorTo: orange
+colorTo: yellow
 sdk: docker
 pinned: false
 app_port: 8000
@@ -12,19 +12,14 @@ tags:
 
 # Incident Triage Environment
 
-An OpenEnv-compliant RL environment that simulates production incident triage. An AI agent receives a production alert and must diagnose the root cause by investigating a microservices architecture — querying logs, metrics, deploys, dependencies, and source code — then submit a diagnosis with remediation.
-
-## Demo
-
-<!-- Replace with your video link after recording -->
-> **Video walkthrough:** [Coming soon — screen recording of baseline agent solving the easy task]
+An OpenEnv-compliant RL environment that simulates production incident triage. An AI agent receives a production alert and must diagnose the root cause by investigating a microservices architecture -- querying logs, metrics, deploys, dependencies, and source code -- then submit a diagnosis with remediation.
 
 ## Why Incident Triage?
 
 Every oncall engineer does this daily: an alert fires, you investigate across services, form hypotheses, and act. This environment captures that workflow as a structured RL task with:
 - **Dense reward signals** from investigation quality (not just final accuracy)
-- **Red herring resistance** — penalizes chasing misleading signals
-- **Efficiency pressure** — step budgets force focused investigation
+- **Red herring resistance** -- penalizes chasing misleading signals
+- **Efficiency pressure** -- step budgets force focused investigation
 - **3 difficulty levels** from straightforward single-service failures to complex multi-hop cascades
 
 ## How It Works (OpenEnv Alignment)
@@ -60,7 +55,7 @@ Agent                          Environment
 | `Rubric` | Per-step rewards: information gain, strategy, red herring resistance |
 | `Grader` | Terminal score 0.0-1.0: diagnosis accuracy + evidence quality + efficiency |
 
-No external alert generation system is needed — scenarios are self-contained simulations with all logs, metrics, deploys, code, and dependency data pre-built.
+No external alert generation system is needed -- scenarios are self-contained simulations with all logs, metrics, deploys, code, and dependency data pre-built.
 
 ## Action Space
 
@@ -92,7 +87,7 @@ No external alert generation system is needed — scenarios are self-contained s
 # Install
 pip install -e ".[dev,baseline]"
 
-# Run server
+# Run server (with interactive Gradio UI)
 PYTHONPATH=. uvicorn server.app:app --host 0.0.0.0 --port 8000
 
 # Run tests
@@ -117,7 +112,6 @@ async def main():
         }))
         obs = json.loads(await ws.recv())
         print(obs["data"]["observation"]["alert"])
-        # -> {"service": "payments-service", "message": "HTTP 500 rate spike...", ...}
 
         # Investigate: query logs
         await ws.send(json.dumps({
@@ -126,21 +120,6 @@ async def main():
         }))
         obs = json.loads(await ws.recv())
         print(obs["data"]["observation"]["result"]["data"])
-        # -> "[2026-03-26T14:32:01Z] [ERROR] NullPointerException in PaymentProcessor..."
-
-        # Investigate: check deploys
-        await ws.send(json.dumps({
-            "type": "step",
-            "data": {"action_type": "check_deploys", "service": "payments-service"}
-        }))
-        obs = json.loads(await ws.recv())
-
-        # Investigate: inspect code
-        await ws.send(json.dumps({
-            "type": "step",
-            "data": {"action_type": "inspect_code", "service": "payments-service"}
-        }))
-        obs = json.loads(await ws.recv())
 
         # Submit diagnosis
         await ws.send(json.dumps({
@@ -153,8 +132,6 @@ async def main():
             }
         }))
         obs = json.loads(await ws.recv())
-        print(obs["data"]["observation"]["result"]["data"])
-        # -> "Diagnosis submitted. Grader score: 0.56"
         print(obs["data"]["done"])  # -> True
 
 asyncio.run(main())
@@ -169,33 +146,32 @@ asyncio.run(main())
 | `/schema` | GET | Action, observation, and state JSON schemas |
 | `/tasks` | GET | List tasks with action schema |
 | `/grader` | POST | Grade a completed episode: `{"episode_id": "..."}` |
-| `/baseline` | POST | Run baseline inference (requires `GEMINI_API_KEY` or `OPENROUTER_API_KEY`) |
 | `/reset` | POST | Reset environment with task_id |
 | `/step` | POST | Take an action |
 | `/state` | GET | Get current episode state |
 | `/ws` | WS | WebSocket for episodes |
 | `/mcp` | POST | MCP JSON-RPC endpoint |
 
-## Baseline
+## Baseline Inference
 
 ```bash
 # Hackathon-compliant inference (uses OpenAI Client with required env vars)
 API_BASE_URL=https://openrouter.ai/api/v1 \
 MODEL_NAME=google/gemini-2.0-flash-exp:free \
 HF_TOKEN=your-api-key \
+ENV_URL=http://localhost:8000 \
 PYTHONPATH=. python inference.py
-
-# Or with Gemini directly
-GEMINI_API_KEY=your-key PYTHONPATH=. python scripts/baseline_inference.py
 ```
 
-### Baseline Scores (`stepfun/step-3.5-flash:free` via OpenRouter)
+### Baseline Scores
 
 | Task | Score | Steps | Budget |
 |------|-------|-------|--------|
-| easy_single_service_failure | 0.67 | 4 | 10 |
-| medium_cascading_dependency | 0.49 | 10 | 15 |
-| hard_multi_signal_cascade | 0.43 | 6 | 20 |
+| easy_single_service_failure | 0.67 | 5 | 10 |
+| medium_cascading_dependency | 0.35 | 8 | 15 |
+| hard_multi_signal_cascade | 0.56 | 14 | 20 |
+
+Scores vary by model. Stronger models (GPT-4o, Gemini 2.0 Flash) achieve higher scores through better chain-of-evidence reasoning.
 
 ## Reward Function
 
@@ -246,11 +222,6 @@ openenv validate --url http://localhost:8000
 openenv push --repo-id <your-username>/incident-triage-env
 ```
 
-Once deployed, test against the Space:
-```bash
-GEMINI_API_KEY=your-key python scripts/baseline_inference.py --url https://<your-username>-incident-triage-env.hf.space
-```
-
 ## Project Structure
 
 ```
@@ -263,9 +234,10 @@ incident-triage-env/
 ├── models.py                 # Pydantic models: Action, Observation, State
 ├── client.py                 # OpenEnv client wrapper
 ├── server/
-│   ├── app.py                # FastAPI app via create_app()
+│   ├── app.py                # FastAPI app + Gradio UI mount
 │   ├── environment.py        # IncidentTriageEnv (reset/step/state)
 │   ├── grader.py             # InvestigationRubric + DiagnosisScorer
+│   ├── gradio_ui.py          # Interactive demo UI for HF Spaces
 │   ├── scenario_loader.py    # Loads and queries scenario JSON fixtures
 │   ├── episode_store.py      # In-memory episode result storage
 │   └── scenarios/

@@ -69,14 +69,7 @@ Imagine you're an oncall engineer at 3am. Your phone buzzes: "HTTP 500 spike on 
 │  Uses: OpenAI Client (AsyncOpenAI) for all LLM calls        │
 └─────────────────────────────────────────────────────────────┘
 ```
-
-### What is uvicorn?
-
-Uvicorn is a lightweight, high-performance ASGI (async) web server for Python. It's what actually runs the FastAPI application and listens on port 8000 for HTTP/WebSocket requests. Think of it like:
-- **FastAPI** = your application code (routes, logic)
-- **Uvicorn** = the web server that serves your application to the network
-
-The command `uvicorn server.app:app --host 0.0.0.0 --port 8000` means: "Start the uvicorn web server, load the `app` object from `server/app.py`, and listen on port 8000."
+ 
 
 ### Why PYTHONPATH=. ?
 

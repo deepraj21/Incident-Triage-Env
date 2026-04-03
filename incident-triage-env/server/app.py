@@ -65,6 +65,18 @@ async def run_baseline():
     return results
 
 
+# Mount Gradio UI for interactive demo
+try:
+    import gradio as gr
+    from server.gradio_ui import build_gradio_app
+
+    gradio_app = build_gradio_app()
+    app = gr.mount_gradio_app(app, gradio_app, path="/")
+except ImportError:
+    # Gradio not installed — API-only mode
+    pass
+
+
 def main():
     import uvicorn
     uvicorn.run(app, host="0.0.0.0", port=8000)
