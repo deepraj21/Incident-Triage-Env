@@ -527,7 +527,7 @@ Uses Google Gemini API (`GEMINI_API_KEY` from env vars, free tier via Google AI 
 
 **LLM provider priority:**
 1. **Gemini 2.0 Flash** (primary) — free tier, native JSON schema support via `response_mime_type="application/json"`, strong reasoning
-2. **OpenRouter** (fallback) — OpenAI-compatible API, use free models like `meta-llama/llama-3-70b-instruct` or `google/gemini-2.0-flash-exp:free`
+2. **OpenRouter** (fallback) — OpenAI-compatible API, use free models like `meta-llama/llama-3-70b-instruct` or `qwen/qwen3.6-plus:free`
 
 ```
 System prompt: "You are an oncall engineer diagnosing a production incident.

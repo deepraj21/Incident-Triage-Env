@@ -157,7 +157,7 @@ asyncio.run(main())
 ```bash
 # Hackathon-compliant inference (uses OpenAI Client with required env vars)
 API_BASE_URL=https://openrouter.ai/api/v1 \
-MODEL_NAME=google/gemini-2.0-flash-exp:free \
+MODEL_NAME=qwen/qwen3.6-plus:free \
 HF_TOKEN=your-api-key \
 ENV_URL=http://localhost:8000 \
 PYTHONPATH=. python inference.py

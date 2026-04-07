@@ -219,8 +219,8 @@ async def run_task(client: AsyncOpenAI, base_url: str, task_id: str) -> dict:
                             })
 
                 if action is None:
-                    log_end(success=False, steps=steps_taken, score=0.0, rewards=rewards)
-                    return {"task_id": task_id, "score": 0.0, "steps": steps_taken, "error": last_error}
+                    log_end(success=False, steps=steps_taken, score=0.001, rewards=rewards)
+                    return {"task_id": task_id, "score": 0.001, "steps": steps_taken, "error": last_error}
 
                 # Clean action
                 action.pop("metadata", None)
@@ -252,7 +252,9 @@ async def run_task(client: AsyncOpenAI, base_url: str, task_id: str) -> dict:
             resp = await http_client.post(grader_url, json={"episode_id": episode_id})
             if resp.status_code == 200:
                 grader_data = resp.json()
-                score = grader_data.get("score", 0.0)
+                score = grader_data.get("score", 0.001)
+                # Clamp strictly within (0, 1) — Phase 2 rejects exact 0.0 or 1.0.
+                score = max(0.001, min(0.999, float(score)))
                 success = score >= 0.3
                 log_end(success=success, steps=steps_taken, score=score, rewards=rewards)
                 return {
@@ -262,12 +264,12 @@ async def run_task(client: AsyncOpenAI, base_url: str, task_id: str) -> dict:
                     "steps": steps_taken,
                 }
             else:
-                log_end(success=False, steps=steps_taken, score=0.0, rewards=rewards)
-                return {"task_id": task_id, "score": 0.0, "steps": steps_taken, "error": f"Grader returned {resp.status_code}"}
+                log_end(success=False, steps=steps_taken, score=0.001, rewards=rewards)
+                return {"task_id": task_id, "score": 0.001, "steps": steps_taken, "error": f"Grader returned {resp.status_code}"}
 
     except Exception as e:
-        log_end(success=False, steps=steps_taken, score=0.0, rewards=rewards)
-        return {"task_id": task_id, "score": 0.0, "steps": steps_taken, "error": str(e)}
+        log_end(success=False, steps=steps_taken, score=0.001, rewards=rewards)
+        return {"task_id": task_id, "score": 0.001, "steps": steps_taken, "error": str(e)}
 
 
 TASK_IDS = [

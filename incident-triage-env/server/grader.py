@@ -266,7 +266,8 @@ class DiagnosisScorer:
         breakdown["penalties"] = round(penalties, 4)
 
         total = sum(v for k, v in breakdown.items())
-        score = max(0.0, min(1.0, total))
+        # Clamp strictly within (0, 1) — Phase 2 evaluator rejects 0.0 or 1.0 exactly.
+        score = max(0.001, min(0.999, total))
 
         return {
             "score": round(score, 4),

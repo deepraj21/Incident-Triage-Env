@@ -207,7 +207,7 @@ PYTHONPATH=. uvicorn server.app:app --host 0.0.0.0 --port 8000
 
 # 3. Run inference (in another terminal)
 API_BASE_URL=https://openrouter.ai/api/v1 \
-MODEL_NAME=google/gemini-2.0-flash-exp:free \
+MODEL_NAME=qwen/qwen3.6-plus:free \
 HF_TOKEN=your-openrouter-key \
 PYTHONPATH=. python inference.py
 

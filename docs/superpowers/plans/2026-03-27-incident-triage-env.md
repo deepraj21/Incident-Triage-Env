@@ -1446,7 +1446,7 @@ The script uses a provider abstraction to support multiple free LLM APIs:
 
 **Provider priority (first available wins):**
 1. **Gemini** (`GEMINI_API_KEY`) — uses `google-genai` SDK with `response_mime_type="application/json"` for native structured output. Model: `gemini-2.0-flash`.
-2. **OpenRouter** (`OPENROUTER_API_KEY`) — uses the `openai` SDK with `base_url="https://openrouter.ai/api/v1"`. Model: `google/gemini-2.0-flash-exp:free` or `meta-llama/llama-3-70b-instruct` (free). Use `response_format={"type": "json_object"}`.
+2. **OpenRouter** (`OPENROUTER_API_KEY`) — uses the `openai` SDK with `base_url="https://openrouter.ai/api/v1"`. Model: `qwen/qwen3.6-plus:free` or `meta-llama/llama-3-70b-instruct` (free). Use `response_format={"type": "json_object"}`.
 3. Raise error if neither key is set.
 
 **Provider abstraction:**
@@ -1474,7 +1474,7 @@ class GeminiProvider(LLMProvider):
 
 class OpenRouterProvider(LLMProvider):
     """OpenRouter via OpenAI-compatible API (free models)."""
-    def __init__(self, api_key: str, model: str = "google/gemini-2.0-flash-exp:free"):
+    def __init__(self, api_key: str, model: str = "qwen/qwen3.6-plus:free"):
         from openai import AsyncOpenAI
         self.client = AsyncOpenAI(base_url="https://openrouter.ai/api/v1", api_key=api_key)
         self.model = model
