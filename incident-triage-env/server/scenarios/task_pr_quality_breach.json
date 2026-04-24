@@ -1,0 +1,282 @@
+{
+  "task_id": "hard_pr_quality_breach",
+  "task_name": "Waived Snyk Finding Shipped",
+  "difficulty": "hard",
+  "step_budget": 18,
+  "clock": {
+    "start": "2026-04-15T18:20:00Z",
+    "step_seconds": 30
+  },
+  "tags": ["ci_gate_failed", "snyk_high_open"],
+  "alert": {
+    "service": "notifications-service",
+    "message": "Credential exfiltration attempt detected — SSRF via webhook callback URL in notifications-service",
+    "severity": "critical",
+    "timestamp": "2026-04-15T18:20:00Z"
+  },
+  "services": {
+    "notifications-service": {
+      "dependencies": ["message-queue"],
+      "dependents": ["api-gateway"],
+      "logs": [
+        {"timestamp": "2026-04-15T18:15:00Z", "severity": "info",  "message": "v2.2 rolled out — webhook payload validation refactored"},
+        {"timestamp": "2026-04-15T18:18:30Z", "severity": "warn",  "message": "unusual outbound request pattern — internal-ip range 10.0.0.0/8"},
+        {"timestamp": "2026-04-15T18:19:10Z", "severity": "error", "message": "SSRF detected: callback_url='http://169.254.169.254/latest/meta-data/iam/security-credentials' — IMDS endpoint"},
+        {"timestamp": "2026-04-15T18:19:40Z", "severity": "error", "message": "blocked outbound call to metadata service — security agent intercepted"},
+        {"timestamp": "2026-04-15T18:20:00Z", "severity": "error", "message": "security page fired; PR #4412 flagged as ingress vector"}
+      ],
+      "metrics": {
+        "error_rate": [
+          {"ts": "18:14", "val": 0.2},
+          {"ts": "18:18", "val": 0.3},
+          {"ts": "18:19", "val": 0.4},
+          {"ts": "18:20", "val": 0.5}
+        ],
+        "outbound_blocked_rate": [
+          {"ts": "18:14", "val": 0.0},
+          {"ts": "18:18", "val": 2.1},
+          {"ts": "18:20", "val": 12.8}
+        ]
+      },
+      "status": {"health": "degraded", "uptime": "99.8%", "active_alerts": ["PG-SEC-1"]},
+      "deploys": [
+        {
+          "timestamp": "2026-04-15T18:10:00Z",
+          "author": "dev-nikhil",
+          "diff_summary": "v2.2: refactor webhook URL validation — use unified URL parser (PR #4412)",
+          "diff_patch": "@@ WebhookValidator.java @@\n- if (!ALLOWED_HOSTS.contains(new URL(callback).getHost())) reject();\n+ // trust the unified parser — CVE advisory for this lib was waived (see PR)\n+ UrlParser.parse(callback);  // no allow-list check"
+        }
+      ],
+      "code_snippets": {
+        "WebhookValidator.java": "public void validate(String callback) {\n  // v2.2 removed the allow-list check; relied on UrlParser.parse which was\n  // flagged as CVE-2025-30417 (SSRF bypass) in Snyk — finding waived by author.\n  UrlParser.parse(callback);\n}"
+      }
+    },
+    "message-queue": {
+      "dependencies": [],
+      "dependents": ["notifications-service"],
+      "logs": [
+        {"timestamp": "2026-04-15T18:15:00Z", "severity": "info", "message": "queue depth nominal"}
+      ],
+      "metrics": {
+        "depth": [{"ts": "18:15", "val": 120}, {"ts": "18:20", "val": 130}]
+      },
+      "status": {"health": "healthy", "uptime": "99.9%", "active_alerts": []},
+      "deploys": [],
+      "code_snippets": {}
+    },
+    "api-gateway": {
+      "dependencies": ["notifications-service"],
+      "dependents": [],
+      "logs": [
+        {"timestamp": "2026-04-15T18:20:00Z", "severity": "warn", "message": "forwarding security-quarantine from notifications-service"}
+      ],
+      "metrics": {
+        "error_rate": [{"ts": "18:20", "val": 0.5}]
+      },
+      "status": {"health": "degraded", "uptime": "99.7%", "active_alerts": []},
+      "deploys": [],
+      "code_snippets": {}
+    }
+  },
+  "timeline": [
+    {
+      "at_step": 3,
+      "event": "new_alert",
+      "payload": {
+        "id": "PG-SEC-2",
+        "service": "notifications-service",
+        "message": "second SSRF attempt blocked — automated scan exploiting same vector",
+        "severity": "critical"
+      }
+    },
+    {
+      "at_step": 7,
+      "event": "new_log",
+      "service": "notifications-service",
+      "payload": {"severity": "warn", "message": "SecOps reviewing PR #4412 — author waived Snyk high finding on UrlParser lib"}
+    }
+  ],
+  "repohub": {
+    "ci_state": {
+      "platform/notifications-service": {
+        "target_repo": "platform/notifications-service",
+        "coverage_pct": 74.2,
+        "coverage_delta_pct": -12.8,
+        "snyk": {
+          "high": 1, "medium": 2, "low": 4,
+          "waived": ["CVE-2025-30417"],
+          "findings": [
+            {
+              "id": "CVE-2025-30417",
+              "severity": "high",
+              "package": "com.acme.urlparser",
+              "title": "SSRF bypass — URL parser normalises IPv4-mapped addresses inconsistently",
+              "waived_by": "dev-nikhil",
+              "waiver_reason": "false positive — we don't use normalise()"
+            }
+          ]
+        },
+        "sonar": {
+          "code_smells": 8, "bugs": 2, "vulnerabilities": 1,
+          "quality_gate": "failed",
+          "failure_reasons": ["coverage below 90%", "1 new vulnerability"]
+        },
+        "raven": {"secrets_found": 0, "iac_misconfigs": 0},
+        "gate_status": "failed_but_merged",
+        "note": "PR #4412 merged past a FAILED quality gate with a waived high-severity Snyk finding"
+      }
+    },
+    "pr_history": {
+      "platform/notifications-service": [
+        {
+          "number": 4412,
+          "title": "v2.2 — unified webhook URL parser",
+          "author": "dev-nikhil",
+          "merged": true,
+          "merged_at": "2026-04-15T18:08:00Z",
+          "ci_gate_status": "failed",
+          "waived_findings": ["CVE-2025-30417"],
+          "reviewers": ["tech-lead-anju"],
+          "note": "quality gate failed (coverage -12.8%, 1 new vuln) but merged via tech-lead override"
+        },
+        {
+          "number": 4389,
+          "title": "v2.1 — retry logic fix",
+          "author": "dev-prasad",
+          "merged": true,
+          "merged_at": "2026-04-12T11:30:00Z",
+          "ci_gate_status": "passed",
+          "waived_findings": [],
+          "reviewers": ["tech-lead-anju"]
+        }
+      ]
+    }
+  },
+  "policies": [
+    {
+      "id": "bonus-check-ci-before-diagnosis",
+      "when": {
+        "app": "system",
+        "op": "submit_diagnosis"
+      },
+      "require_prior": {
+        "app": "repohub",
+        "op": "ci_check"
+      },
+      "require_prior_within_steps": 14,
+      "bonus": 0.12,
+      "penalty": -0.05
+    },
+    {
+      "id": "forbid-forward-fix-pr-with-open-vulns",
+      "when": {
+        "app": "repohub",
+        "op": "open_pr"
+      },
+      "forbidden_if": {"scenario_tag": "snyk_high_open"},
+      "penalty": -0.25
+    },
+    {
+      "id": "bonus-rollback-when-gate-failed",
+      "when": {
+        "app": "system",
+        "op": "submit_diagnosis",
+        "args_match": {"remediation": "rollback_deploy"}
+      },
+      "bonus": 0.10
+    }
+  ],
+  "alerthub": {
+    "alerts": [
+      {
+        "id": "PG-SEC-1",
+        "service": "notifications-service",
+        "message": "SSRF attempt via webhook — v2.2 vector, PR #4412 waived Snyk high",
+        "severity": "critical",
+        "fire_time": "2026-04-15T18:20:00Z"
+      }
+    ]
+  },
+  "chatops": {
+    "oncall_lead": "secops-leena",
+    "channels": {
+      "incidents": [
+        {"user": "secops-leena", "ts": "18:20", "text": "SSRF fired on notifications. Pulling PR history."},
+        {"user": "secops-leena", "ts": "18:21", "text": "PR #4412 waived CVE-2025-30417. That's our vector."}
+      ]
+    }
+  },
+  "ticketdesk": {
+    "tickets": [
+      {"id": "SEC-9001", "title": "SSRF via notifications webhook",
+       "body": "Active exploitation attempt; v2.2 suspected; see PR #4412 waived finding",
+       "severity": "sev1", "status": "open"},
+      {"id": "POL-555",  "title": "Tech-lead override policy review",
+       "body": "When can tech-leads override a failed quality gate? Clarify.",
+       "severity": "reference", "status": "open"}
+    ]
+  },
+  "obsly": {
+    "traces": {
+      "trace-ssrf-1": {
+        "trace_id": "trace-ssrf-1",
+        "duration_ms": 310,
+        "spans": [
+          {"name": "notifications.webhook.receive", "ms": 12, "status": "ok"},
+          {"name": "WebhookValidator.validate",     "ms": 2,  "status": "ok",
+           "note": "passed — no allow-list enforced after v2.2"},
+          {"name": "egress.http.outbound",          "ms": 296, "status": "blocked",
+           "error": "169.254.169.254 — IMDS, quarantined by security-agent"}
+        ]
+      }
+    }
+  },
+  "evidence_labels": {
+    "notifications-service": {
+      "query_logs":         "direct_evidence",
+      "query_metrics":      "contextual",
+      "check_deploys":      "direct_evidence",
+      "trace_dependencies": "contextual",
+      "check_status":       "contextual",
+      "inspect_code":       "direct_evidence"
+    },
+    "message-queue": {
+      "query_logs": "contextual", "query_metrics": "contextual", "check_deploys": "contextual",
+      "trace_dependencies": "contextual", "check_status": "contextual", "inspect_code": "contextual"
+    },
+    "api-gateway": {
+      "query_logs": "contextual", "query_metrics": "contextual", "check_deploys": "contextual",
+      "trace_dependencies": "contextual", "check_status": "contextual", "inspect_code": "contextual"
+    }
+  },
+  "ground_truth": {
+    "root_cause_service": "notifications-service",
+    "root_cause_category": "bad_deploy",
+    "remediation": "rollback_deploy",
+    "causal_chain": [
+      "v2.2 removed the host allow-list and relied on UrlParser for validation",
+      "UrlParser has a known SSRF bypass (CVE-2025-30417) flagged by Snyk",
+      "the Snyk finding was waived by the PR author and the quality gate failed",
+      "tech-lead approved merge anyway; prod now has an active SSRF vector"
+    ],
+    "red_herrings": [
+      "message-queue is healthy — not in the causal chain",
+      "api-gateway just forwards the quarantine — symptom only"
+    ],
+    "evidence_services": ["notifications-service"],
+    "anomalous_services": ["notifications-service", "api-gateway"],
+    "failure_family": "waived-vuln forward-merge with failed CI gate",
+    "correct_pr": {
+      "target_repo": "platform/notifications-service",
+      "touched_files": ["WebhookValidator.java"],
+      "keywords": ["revert", "rollback", "v2.1", "ssrf", "cve-2025-30417", "snyk", "allow-list"]
+    },
+    "correct_blast_radius": {
+      "affected_services": ["notifications-service", "api-gateway"],
+      "estimated_requests_failed": 200,
+      "missed_regions": [],
+      "outage_window_start": "2026-04-15T18:18:00Z",
+      "outage_window_end":   "2026-04-15T18:40:00Z"
+    }
+  }
+}

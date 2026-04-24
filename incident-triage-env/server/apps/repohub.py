@@ -131,4 +131,50 @@ def dispatch(
         pr_url = f"https://repohub.internal/{pr['target_repo']}/pull/{len(state.opened_prs)}"
         return json.dumps({"pr_url": pr_url, **pr}, indent=2)
 
+    # Tier A2 — simulated CI quality gate report (Snyk / Sonar / Raven / coverage).
+    # Scenarios populate `scenario["repohub"]["ci_state"][<target_repo>]`.
+    if op == "ci_check":
+        target_repo = args.get("target_repo", "")
+        ci = (scenario.get("repohub") or {}).get("ci_state") or {}
+        report = ci.get(target_repo)
+        if report is None:
+            # Default synthesised report — healthy repo, so the agent sees a
+            # baseline and scenarios can opt-in to breakage by populating ci_state.
+            report = {
+                "target_repo": target_repo,
+                "coverage_pct": 92.0,
+                "coverage_delta_pct": 0.0,
+                "snyk": {"high": 0, "medium": 0, "low": 0, "waived": []},
+                "sonar": {
+                    "code_smells": 3, "bugs": 0, "vulnerabilities": 0,
+                    "quality_gate": "passed",
+                },
+                "raven": {"secrets_found": 0, "iac_misconfigs": 0},
+                "gate_status": "passed",
+                "note": "no scenario override — default healthy profile",
+            }
+        # Record evidence so a future policy / grader can check whether the
+        # agent actually queried CI before acting.
+        checked = state.evidence_collected.setdefault("__ci_checked__", [])
+        if target_repo not in checked:
+            checked.append(target_repo)
+        return json.dumps(report, indent=2)
+
+    if op == "list_pr_history":
+        target_repo = args.get("target_repo", "")
+        history = (scenario.get("repohub") or {}).get("pr_history") or {}
+        prs = history.get(target_repo, [])
+        if not prs:
+            return f"No PR history found for {target_repo}."
+        rows = []
+        for pr in prs:
+            gate = pr.get("ci_gate_status", "?")
+            waived = ",".join(pr.get("waived_findings", []) or []) or "-"
+            rows.append(
+                f"#{pr.get('number','?')} {pr.get('title','')} "
+                f"[merged={pr.get('merged', False)} gate={gate} waived={waived}] "
+                f"by {pr.get('author','?')} at {pr.get('merged_at','?')}"
+            )
+        return "\n".join(rows)
+
     return f"Unknown op for repohub: {op}"

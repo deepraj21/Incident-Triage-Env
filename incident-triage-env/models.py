@@ -60,6 +60,7 @@ class AppName(str, Enum):
     REPOHUB = "repohub"
     TICKETDESK = "ticketdesk"
     CHATOPS = "chatops"
+    UATSIM = "uatsim"  # Tier A1 — pre-prod / UAT sign-off simulation
     SYSTEM = "system"  # reserved for submit_diagnosis
 
 
@@ -86,6 +87,8 @@ class RepoHubOp(str, Enum):
     GET_BLAME = "get_blame"
     OPEN_PR = "open_pr"
     LIST_FILES = "list_files"  # free-win: needed by stealth_regression scenario
+    CI_CHECK = "ci_check"      # Tier A2 — synthetic Snyk/Sonar/Raven/coverage report
+    LIST_PR_HISTORY = "list_pr_history"  # Tier A2 — past PRs + their CI outcomes
 
 
 class TicketDeskOp(str, Enum):
@@ -102,6 +105,14 @@ class ChatOpsOp(str, Enum):
     PAGE_ONCALL = "page_oncall"
 
 
+class UATSimOp(str, Enum):
+    """Tier A1 — pre-production / UAT sign-off simulation."""
+    LIST_STAGES = "list_stages"
+    GET_STAGE = "get_stage"
+    GET_SIGNOFF_STATUS = "get_signoff_status"
+    CHECK_UAT_RECORD = "check_uat_record"  # per-service: did UAT pass before deploy?
+
+
 class SystemOp(str, Enum):
     SUBMIT_DIAGNOSIS = "submit_diagnosis"
 
@@ -112,6 +123,7 @@ _ALLOWED_OPS: Dict[AppName, set] = {
     AppName.REPOHUB: {e.value for e in RepoHubOp},
     AppName.TICKETDESK: {e.value for e in TicketDeskOp},
     AppName.CHATOPS: {e.value for e in ChatOpsOp},
+    AppName.UATSIM: {e.value for e in UATSimOp},
     AppName.SYSTEM: {e.value for e in SystemOp},
 }
 
@@ -237,6 +249,12 @@ _REQUIRED_ARGS: Dict[Tuple[str, str], List[str]] = {
     (AppName.REPOHUB.value, "get_blame"): ["service", "path"],
     (AppName.REPOHUB.value, "open_pr"): ["target_repo", "title", "head_branch"],
     (AppName.REPOHUB.value, "list_files"): ["service"],
+    (AppName.REPOHUB.value, "ci_check"): ["target_repo"],
+    (AppName.REPOHUB.value, "list_pr_history"): ["target_repo"],
+    (AppName.UATSIM.value, "list_stages"): [],
+    (AppName.UATSIM.value, "get_stage"): ["stage_id"],
+    (AppName.UATSIM.value, "get_signoff_status"): [],
+    (AppName.UATSIM.value, "check_uat_record"): ["service"],
     (AppName.TICKETDESK.value, "search_tickets"): [],
     (AppName.TICKETDESK.value, "get_ticket"): ["ticket_id"],
     (AppName.TICKETDESK.value, "create_incident"): ["title"],

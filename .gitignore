@@ -58,3 +58,8 @@ Thumbs.db
 
 hf-deploy/__pycache__/
 *.pyc
+hf-deploy/
+incident-triage-env/trained/
+*.safetensors
+incident-triage-env/trained/
+*.safetensors

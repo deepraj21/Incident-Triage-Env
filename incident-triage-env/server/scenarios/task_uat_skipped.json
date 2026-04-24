@@ -1,0 +1,222 @@
+{
+  "task_id": "medium_uat_skipped",
+  "task_name": "UAT-Bypassed Regression",
+  "difficulty": "medium",
+  "step_budget": 14,
+  "clock": {
+    "start": "2026-04-10T09:45:00Z",
+    "step_seconds": 30
+  },
+  "tags": ["uat_bypassed"],
+  "alert": {
+    "service": "checkout-service",
+    "message": "Guest-checkout path 500s — 6% of anonymous sessions since 09:42 UTC",
+    "severity": "critical",
+    "timestamp": "2026-04-10T09:45:00Z"
+  },
+  "services": {
+    "checkout-service": {
+      "dependencies": ["orders-service", "auth-service"],
+      "dependents": ["api-gateway"],
+      "logs": [
+        {"timestamp": "2026-04-10T09:40:00Z", "severity": "info",  "message": "v3.4 rolled out to prod (canary→100%)"},
+        {"timestamp": "2026-04-10T09:42:10Z", "severity": "error", "message": "NullPointerException in GuestCheckoutHandler.resolveSessionToken — token is null"},
+        {"timestamp": "2026-04-10T09:42:22Z", "severity": "error", "message": "NullPointerException in GuestCheckoutHandler.resolveSessionToken — token is null"},
+        {"timestamp": "2026-04-10T09:43:00Z", "severity": "warn",  "message": "guest-checkout error rate crossed 5% threshold"},
+        {"timestamp": "2026-04-10T09:44:30Z", "severity": "error", "message": "Customer-facing 500s on anonymous checkout flow"}
+      ],
+      "metrics": {
+        "error_rate": [
+          {"ts": "09:38", "val": 0.1},
+          {"ts": "09:41", "val": 0.2},
+          {"ts": "09:42", "val": 6.1},
+          {"ts": "09:44", "val": 6.8}
+        ],
+        "latency_p99": [
+          {"ts": "09:38", "val": 180},
+          {"ts": "09:42", "val": 420}
+        ]
+      },
+      "status": {"health": "degraded", "uptime": "99.4%", "active_alerts": ["PG-UAT-1"]},
+      "deploys": [
+        {
+          "timestamp": "2026-04-10T09:30:00Z",
+          "author": "dev-harsha",
+          "diff_summary": "v3.4: optimise GuestCheckoutHandler — skip redundant session-token fetch for logged-in users",
+          "diff_patch": "@@ GuestCheckoutHandler.java @@\n- String token = session.getToken();\n+ // v3.4: token lookup moved behind auth-gate — no longer called on guest path\n+ String token = session.isAuthenticated() ? session.getToken() : null;"
+        }
+      ],
+      "code_snippets": {
+        "GuestCheckoutHandler.java": "public Result resolveSessionToken(Session session) {\n  String token = session.isAuthenticated() ? session.getToken() : null;\n  // BUG: downstream still assumes token is non-null for guests\n  return token.startsWith(\"guest-\") ? guestFlow(token) : authFlow(token);\n}"
+      }
+    },
+    "orders-service": {
+      "dependencies": [],
+      "dependents": ["checkout-service"],
+      "logs": [
+        {"timestamp": "2026-04-10T09:40:00Z", "severity": "info", "message": "orders-service healthy; no failures observed"}
+      ],
+      "metrics": {
+        "error_rate": [{"ts": "09:40", "val": 0.1}]
+      },
+      "status": {"health": "healthy", "uptime": "99.9%", "active_alerts": []},
+      "deploys": [],
+      "code_snippets": {}
+    },
+    "auth-service": {
+      "dependencies": [],
+      "dependents": ["checkout-service"],
+      "logs": [
+        {"timestamp": "2026-04-10T09:40:00Z", "severity": "info", "message": "auth-service nominal"}
+      ],
+      "metrics": {
+        "error_rate": [{"ts": "09:40", "val": 0.1}]
+      },
+      "status": {"health": "healthy", "uptime": "99.9%", "active_alerts": []},
+      "deploys": [],
+      "code_snippets": {}
+    }
+  },
+  "timeline": [
+    {
+      "at_step": 2,
+      "event": "new_log",
+      "service": "checkout-service",
+      "payload": {"severity": "warn", "message": "QA-lead mira asking in #releases: 'did this v3.4 get a UAT pass?'"}
+    },
+    {
+      "at_step": 6,
+      "event": "slo_burn",
+      "service": "checkout-service",
+      "payload": {"burn_rate_x": 8.0}
+    }
+  ],
+  "uatsim": {
+    "stages": [
+      {"id": "smoke",      "name": "smoke-tests",      "required": true,  "status": "passed",  "run_at": "2026-04-10T09:15:00Z"},
+      {"id": "regression", "name": "regression-suite", "required": true,  "status": "skipped", "reason": "release-captain override to hit marketing launch window"},
+      {"id": "load",       "name": "load-test",        "required": false, "status": "passed",  "run_at": "2026-04-10T09:22:00Z"},
+      {"id": "guest_path", "name": "anonymous-checkout-UAT", "required": true, "status": "skipped", "reason": "'covered by smoke' — NOT actually covered"}
+    ],
+    "signoffs": [
+      {"role": "qa-lead",  "user": "mira",  "signed": false},
+      {"role": "product",  "user": "priya", "signed": true},
+      {"role": "release-captain", "user": "ravi", "signed": true}
+    ],
+    "uat_records": {
+      "checkout-service": {
+        "passed_stages": ["smoke", "load"],
+        "skipped_stages": ["regression", "guest_path"],
+        "signoff_complete": false,
+        "deploy_shipped_anyway": true,
+        "note": "v3.4 was merged despite QA-lead holding signoff; guest-checkout path had no dedicated coverage"
+      }
+    }
+  },
+  "policies": [
+    {
+      "id": "bonus-check-uat-gate-before-diagnosis",
+      "when": {
+        "app": "system",
+        "op": "submit_diagnosis"
+      },
+      "require_prior": {
+        "app": "uatsim",
+        "op": "check_uat_record"
+      },
+      "require_prior_within_steps": 12,
+      "bonus": 0.12,
+      "penalty": -0.05
+    },
+    {
+      "id": "bonus-rollback-for-uat-bypass",
+      "when": {
+        "app": "system",
+        "op": "submit_diagnosis",
+        "args_match": {"remediation": "rollback_deploy"}
+      },
+      "bonus": 0.08
+    }
+  ],
+  "alerthub": {
+    "alerts": [
+      {
+        "id": "PG-UAT-1",
+        "service": "checkout-service",
+        "message": "guest-checkout 500s at 6% — UAT coverage questionable",
+        "severity": "critical",
+        "fire_time": "2026-04-10T09:45:00Z"
+      }
+    ]
+  },
+  "chatops": {
+    "oncall_lead": "sre-dmitri",
+    "channels": {
+      "incidents": [
+        {"user": "sre-dmitri", "ts": "09:43", "text": "on it — looks like v3.4 checkout regression"},
+        {"user": "qa-mira",    "ts": "09:44", "text": "flagging: I never signed off v3.4 regression suite. Why is it in prod?"}
+      ],
+      "releases": [
+        {"user": "release-ravi", "ts": "09:29", "text": "cutting v3.4 — we need to hit the 10am launch. Regression can run in prod."}
+      ]
+    }
+  },
+  "ticketdesk": {
+    "tickets": [
+      {"id": "INC-5001", "title": "checkout-service guest 500s",  "body": "v3.4 suspected", "severity": "sev1", "status": "open"},
+      {"id": "QA-221",   "title": "v3.4 UAT sign-off incomplete", "body": "regression + guest_path stages skipped by release-captain override",
+       "severity": "major", "status": "open"}
+    ]
+  },
+  "obsly": {
+    "traces": {}
+  },
+  "evidence_labels": {
+    "checkout-service": {
+      "query_logs":         "direct_evidence",
+      "query_metrics":      "direct_evidence",
+      "check_deploys":      "direct_evidence",
+      "trace_dependencies": "contextual",
+      "check_status":       "contextual",
+      "inspect_code":       "direct_evidence"
+    },
+    "orders-service": {
+      "query_logs": "contextual", "query_metrics": "contextual", "check_deploys": "contextual",
+      "trace_dependencies": "contextual", "check_status": "contextual", "inspect_code": "contextual"
+    },
+    "auth-service": {
+      "query_logs": "contextual", "query_metrics": "contextual", "check_deploys": "contextual",
+      "trace_dependencies": "contextual", "check_status": "contextual", "inspect_code": "contextual"
+    }
+  },
+  "ground_truth": {
+    "root_cause_service": "checkout-service",
+    "root_cause_category": "bad_deploy",
+    "remediation": "rollback_deploy",
+    "causal_chain": [
+      "v3.4 deploy changed token-resolution to return null for guests",
+      "downstream code still dereferences the token on the guest path",
+      "NullPointerException on every anonymous checkout",
+      "UAT guest_path + regression suites were skipped, so this was never caught pre-prod"
+    ],
+    "red_herrings": [
+      "orders-service and auth-service latency normal — downstream only",
+      "release-captain override message on #releases looks procedural but was the enabling condition"
+    ],
+    "evidence_services": ["checkout-service"],
+    "anomalous_services": ["checkout-service"],
+    "failure_family": "UAT-bypassed bad deploy",
+    "correct_pr": {
+      "target_repo": "commerce/checkout-service",
+      "touched_files": ["GuestCheckoutHandler.java"],
+      "keywords": ["revert", "rollback", "v3.3", "guest", "token", "uat"]
+    },
+    "correct_blast_radius": {
+      "affected_services": ["checkout-service", "api-gateway"],
+      "estimated_requests_failed": 3500,
+      "missed_regions": [],
+      "outage_window_start": "2026-04-10T09:42:00Z",
+      "outage_window_end":   "2026-04-10T10:00:00Z"
+    }
+  }
+}
