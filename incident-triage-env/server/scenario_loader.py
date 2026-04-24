@@ -3,6 +3,7 @@ from pathlib import Path
 from typing import Optional
 
 from models import AlertInfo
+from server.scenario_variants import apply_variant
 
 SCENARIOS_DIR = Path(__file__).parent / "scenarios"
 
@@ -10,7 +11,18 @@ TASK_FILES = {
     "easy_single_service_failure": "task_easy.json",
     "medium_cascading_dependency": "task_medium.json",
     "hard_multi_signal_cascade": "task_hard.json",
+    "hard_region_failover": "task_region_failover.json",
+    "hard_freeze_violation": "task_freeze_violation.json",
+    "expert_stealth_regression": "task_stealth_regression.json",
 }
+
+# Held-out split — never used for GRPO training, reserved for before/after eval.
+EVAL_TASK_IDS = {
+    "hard_multi_signal_cascade",
+    "expert_stealth_regression",
+}
+
+TRAIN_TASK_IDS = [tid for tid in TASK_FILES if tid not in EVAL_TASK_IDS]
 
 
 class ScenarioLoader:
@@ -32,10 +44,19 @@ class ScenarioLoader:
             for s in self._scenarios.values()
         ]
 
-    def get_scenario(self, task_id: str) -> dict:
+    def get_scenario(self, task_id: str, seed: Optional[int] = None) -> dict:
         if task_id not in self._scenarios:
             raise ValueError(f"Unknown task_id: {task_id}. Available: {list(self._scenarios.keys())}")
-        return self._scenarios[task_id]
+        base = self._scenarios[task_id]
+        if seed is None:
+            return base
+        return apply_variant(base, seed)
+
+    def list_train_tasks(self) -> list[str]:
+        return list(TRAIN_TASK_IDS)
+
+    def list_eval_tasks(self) -> list[str]:
+        return sorted(EVAL_TASK_IDS)
 
     def get_alert(self, task_id: str) -> AlertInfo:
         scenario = self.get_scenario(task_id)

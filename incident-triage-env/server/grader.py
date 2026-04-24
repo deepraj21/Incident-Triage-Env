@@ -1,5 +1,7 @@
 import math
-from typing import Any
+import re
+from datetime import datetime, timezone
+from typing import Any, Optional
 
 from openenv.core.rubrics.base import Rubric
 
@@ -272,5 +274,283 @@ class DiagnosisScorer:
         return {
             "score": round(score, 4),
             "breakdown": breakdown,
+            "diagnosis_submitted": True,
+        }
+
+
+# =============================================================================
+# Phase 5 — multi-head scorers
+# =============================================================================
+
+
+def _f1(pred: set, gold: set) -> float:
+    if not pred and not gold:
+        return 1.0
+    if not pred or not gold:
+        return 0.0
+    tp = len(pred & gold)
+    if tp == 0:
+        return 0.0
+    prec = tp / len(pred)
+    rec = tp / len(gold)
+    return 2 * prec * rec / (prec + rec)
+
+
+def _parse_iso(s: Optional[str]) -> Optional[datetime]:
+    if not s:
+        return None
+    try:
+        return datetime.fromisoformat(s.replace("Z", "+00:00"))
+    except (ValueError, TypeError):
+        return None
+
+
+def _window_overlap_fraction(pred_start, pred_end, gold_start, gold_end) -> float:
+    """Return [0,1]: IoU of two time windows; 0 if either window invalid."""
+    if None in (pred_start, pred_end, gold_start, gold_end):
+        return 0.0
+    if pred_end <= pred_start or gold_end <= gold_start:
+        return 0.0
+    latest_start = max(pred_start, gold_start)
+    earliest_end = min(pred_end, gold_end)
+    inter = max(0.0, (earliest_end - latest_start).total_seconds())
+    union_start = min(pred_start, gold_start)
+    union_end = max(pred_end, gold_end)
+    union = (union_end - union_start).total_seconds()
+    return inter / union if union > 0 else 0.0
+
+
+class PRProposalScorer:
+    """Grades an agent's structured PRProposal against scenario ground-truth."""
+
+    def score(self, correct_pr: dict, pr_proposal: Optional[dict]) -> dict:
+        if not correct_pr:
+            return {"score": None, "breakdown": {}, "submitted": pr_proposal is not None,
+                    "applicable": False}
+        if not pr_proposal:
+            return {"score": 0.0, "breakdown": {}, "submitted": False, "applicable": True}
+
+        breakdown: dict[str, float] = {}
+
+        # target_repo (0.30) — exact match, or substring if ground truth is a suffix
+        gt_repo = (correct_pr.get("target_repo") or "").strip().lower()
+        sub_repo = (pr_proposal.get("target_repo") or "").strip().lower()
+        if gt_repo and gt_repo == sub_repo:
+            breakdown["target_repo"] = 0.30
+        elif gt_repo and gt_repo in sub_repo:
+            breakdown["target_repo"] = 0.15
+        else:
+            breakdown["target_repo"] = 0.0
+
+        # touched_files (0.35) — F1 of files referenced in diff_patch or summary
+        gt_files = {f.lower() for f in correct_pr.get("touched_files", [])}
+        haystack = " ".join([
+            pr_proposal.get("diff_patch", "") or "",
+            pr_proposal.get("summary", "") or "",
+            pr_proposal.get("title", "") or "",
+        ]).lower()
+        pred_files = {f for f in gt_files if f in haystack}
+        # We only measure recall here because the agent's diff may reference
+        # extra files; penalising extra files would discourage honest reporting.
+        recall = (len(pred_files) / len(gt_files)) if gt_files else 1.0
+        breakdown["touched_files"] = round(0.35 * recall, 4)
+
+        # keyword coverage (0.25)
+        gt_keywords = [k.lower() for k in correct_pr.get("keywords", [])]
+        title_summary = " ".join([
+            pr_proposal.get("title", "") or "",
+            pr_proposal.get("summary", "") or "",
+        ]).lower()
+        if gt_keywords:
+            hits = sum(1 for k in gt_keywords if k in title_summary)
+            breakdown["keywords"] = round(0.25 * hits / len(gt_keywords), 4)
+        else:
+            breakdown["keywords"] = 0.25
+
+        # structural validity (0.10)
+        struct = 0.0
+        if (pr_proposal.get("title") or "").strip():
+            struct += 0.03
+        if (pr_proposal.get("head_branch") or "").strip():
+            struct += 0.03
+        if len((pr_proposal.get("summary") or "").strip()) >= 20:
+            struct += 0.04
+        breakdown["structural"] = round(struct, 4)
+
+        total = sum(breakdown.values())
+        return {
+            "score": round(max(0.0, min(1.0, total)), 4),
+            "breakdown": breakdown,
+            "submitted": True,
+            "applicable": True,
+        }
+
+
+class BlastRadiusScorer:
+    """Grades the agent's BlastRadiusReport against ground-truth impact."""
+
+    def score(self, correct_br: dict, blast_radius: Optional[dict]) -> dict:
+        if not correct_br:
+            return {"score": None, "breakdown": {}, "submitted": blast_radius is not None,
+                    "applicable": False}
+        if not blast_radius:
+            return {"score": 0.0, "breakdown": {}, "submitted": False, "applicable": True}
+
+        breakdown: dict[str, float] = {}
+
+        # affected_services F1 (0.40)
+        gt_svcs = {s.lower() for s in correct_br.get("affected_services", [])}
+        sub_svcs = {s.lower() for s in blast_radius.get("affected_services", []) or []}
+        breakdown["affected_services"] = round(0.40 * _f1(sub_svcs, gt_svcs), 4)
+
+        # missed_regions F1 (0.20)
+        gt_regions = {r.lower() for r in correct_br.get("missed_regions", [])}
+        sub_regions = {r.lower() for r in blast_radius.get("missed_regions", []) or []}
+        if not gt_regions and not sub_regions:
+            breakdown["missed_regions"] = 0.20
+        else:
+            breakdown["missed_regions"] = round(0.20 * _f1(sub_regions, gt_regions), 4)
+
+        # requests_failed order-of-magnitude tolerance (0.20)
+        gt_req = correct_br.get("estimated_requests_failed", 0) or 0
+        sub_req = blast_radius.get("estimated_requests_failed", 0) or 0
+        if gt_req <= 0:
+            breakdown["requests_failed"] = 0.20 if sub_req == 0 else 0.10
+        elif sub_req <= 0:
+            breakdown["requests_failed"] = 0.0
+        else:
+            diff = abs(math.log10(max(1, sub_req)) - math.log10(max(1, gt_req)))
+            if diff < 0.5:
+                breakdown["requests_failed"] = 0.20
+            elif diff < 1.0:
+                breakdown["requests_failed"] = 0.12
+            elif diff < 2.0:
+                breakdown["requests_failed"] = 0.05
+            else:
+                breakdown["requests_failed"] = 0.0
+
+        # outage window IoU (0.20)
+        iou = _window_overlap_fraction(
+            _parse_iso(blast_radius.get("outage_window_start")),
+            _parse_iso(blast_radius.get("outage_window_end")),
+            _parse_iso(correct_br.get("outage_window_start")),
+            _parse_iso(correct_br.get("outage_window_end")),
+        )
+        breakdown["outage_window"] = round(0.20 * iou, 4)
+
+        total = sum(breakdown.values())
+        return {
+            "score": round(max(0.0, min(1.0, total)), 4),
+            "breakdown": breakdown,
+            "submitted": True,
+            "applicable": True,
+        }
+
+
+class PolicyComplianceScorer:
+    """Wraps PolicyEngine.summary() compliance_score into the composite schema."""
+
+    def score(self, policy_summary: Optional[dict]) -> dict:
+        if not policy_summary:
+            return {"score": 1.0, "breakdown": {"compliance_score": 1.0}, "applicable": False}
+        compliance = float(policy_summary.get("compliance_score", 1.0))
+        return {
+            "score": round(max(0.0, min(1.0, compliance)), 4),
+            "breakdown": {
+                "compliance_score": compliance,
+                "num_violations": policy_summary.get("num_violations", 0),
+                "total_penalty": policy_summary.get("total_penalty", 0.0),
+                "total_bonus": policy_summary.get("total_bonus", 0.0),
+            },
+            "applicable": True,
+        }
+
+
+class CompositeScorer:
+    """Aggregates diagnosis + policy + blast-radius + PR heads into a single score.
+
+    Default weights: diagnosis 0.40, policy 0.20, blast 0.20, pr 0.20.
+    When a head is inapplicable (no ground-truth for that head, or the agent
+    did not submit that payload but the head is required), its weight is
+    redistributed proportionally across the remaining applicable heads so the
+    final score stays comparable across scenarios.
+    """
+
+    DEFAULT_WEIGHTS = {"diagnosis": 0.40, "policy": 0.20, "blast": 0.20, "pr": 0.20}
+
+    def __init__(self, weights: Optional[dict] = None):
+        self._weights = dict(weights or self.DEFAULT_WEIGHTS)
+        self._diag = DiagnosisScorer()
+        self._pr = PRProposalScorer()
+        self._blast = BlastRadiusScorer()
+        self._policy = PolicyComplianceScorer()
+
+    def score(
+        self,
+        ground_truth: dict,
+        diagnosis: dict,
+        episode_state: Any,
+        scenario_services: dict | None = None,
+        policy_summary: Optional[dict] = None,
+    ) -> dict:
+        diag_result = self._diag.score(ground_truth, diagnosis, episode_state, scenario_services)
+        pr_result = self._pr.score(
+            ground_truth.get("correct_pr", {}),
+            diagnosis.get("pr_proposal") if diagnosis else None,
+        )
+        blast_result = self._blast.score(
+            ground_truth.get("correct_blast_radius", {}),
+            diagnosis.get("blast_radius") if diagnosis else None,
+        )
+        policy_result = self._policy.score(policy_summary)
+
+        heads = {
+            "diagnosis": diag_result,
+            "policy": policy_result,
+            "blast": blast_result,
+            "pr": pr_result,
+        }
+
+        # Decide which heads contribute. Diagnosis and policy always apply;
+        # blast/pr apply only if ground-truth provides them.
+        applicable = {
+            "diagnosis": diag_result.get("diagnosis_submitted", False),
+            "policy": policy_result.get("applicable", True),
+            "blast": blast_result.get("applicable", False),
+            "pr": pr_result.get("applicable", False),
+        }
+
+        # If no diagnosis was submitted, the whole score is zero (terminal failure).
+        if not applicable["diagnosis"]:
+            return {
+                "score": 0.0,
+                "heads": heads,
+                "weights": dict(self._weights),
+                "effective_weights": {k: 0.0 for k in self._weights},
+                "diagnosis_submitted": False,
+            }
+
+        # Redistribute weights of inapplicable heads.
+        active_weights = {
+            k: self._weights[k] for k in self._weights if applicable.get(k, False)
+        }
+        total_active = sum(active_weights.values())
+        if total_active <= 0:
+            effective = dict(self._weights)
+        else:
+            effective = {k: w / total_active for k, w in active_weights.items()}
+
+        score = 0.0
+        for head_name, w in effective.items():
+            head_score = heads[head_name].get("score") or 0.0
+            score += w * head_score
+
+        # Hold strict (0,1) for OpenEnv compat (inherits from diag scorer constraint).
+        score = max(0.001, min(0.999, score))
+        return {
+            "score": round(score, 4),
+            "heads": heads,
+            "weights": dict(self._weights),
+            "effective_weights": {k: round(v, 4) for k, v in effective.items()},
             "diagnosis_submitted": True,
         }

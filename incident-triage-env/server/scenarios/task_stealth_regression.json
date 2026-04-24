@@ -1,0 +1,410 @@
+{
+  "task_id": "expert_stealth_regression",
+  "task_name": "Silent Metric Drift",
+  "difficulty": "expert",
+  "step_budget": 20,
+  "clock": {
+    "start": "2026-04-02T11:00:00Z",
+    "step_seconds": 30
+  },
+  "tags": [],
+  "alert": {
+    "service": "recommendations-service",
+    "message": "p99 latency gradually climbing on recommendations-service — no errors, no pages",
+    "severity": "warning",
+    "timestamp": "2026-04-02T11:00:00Z"
+  },
+  "services": {
+    "recommendations-service": {
+      "dependencies": [
+        "ml-model-server",
+        "feature-store"
+      ],
+      "dependents": [],
+      "logs": [
+        {
+          "timestamp": "2026-04-02T10:55:00Z",
+          "severity": "info",
+          "message": "recommendations nominal, p99 ~220ms"
+        },
+        {
+          "timestamp": "2026-04-02T11:00:05Z",
+          "severity": "info",
+          "message": "slight uptick in model inference time — investigating"
+        },
+        {
+          "timestamp": "2026-04-02T11:02:00Z",
+          "severity": "info",
+          "message": "no explicit errors; catalog served successfully"
+        }
+      ],
+      "metrics": {
+        "latency_p99": [
+          {
+            "ts": "10:55",
+            "val": 220
+          },
+          {
+            "ts": "10:57",
+            "val": 230
+          },
+          {
+            "ts": "10:59",
+            "val": 240
+          },
+          {
+            "ts": "11:00",
+            "val": 280
+          },
+          {
+            "ts": "11:02",
+            "val": 340
+          },
+          {
+            "ts": "11:04",
+            "val": 420
+          }
+        ],
+        "error_rate": [
+          {
+            "ts": "10:55",
+            "val": 0.1
+          },
+          {
+            "ts": "11:00",
+            "val": 0.1
+          }
+        ]
+      },
+      "status": {
+        "health": "degraded",
+        "uptime": "99.9%",
+        "active_alerts": [
+          "PG-SR-1"
+        ]
+      },
+      "deploys": [
+        {
+          "timestamp": "2026-04-02T10:30:00Z",
+          "author": "ml-eng-priya",
+          "diff_summary": "ml-model-server v1.8: bump model ensemble from 3→7 models (A/B test flag on)",
+          "diff_patch": "@@ model_server.py @@\n- ENSEMBLE_SIZE = 3\n+ ENSEMBLE_SIZE = 7  # A/B test: canary 10% initially, now 100%"
+        }
+      ],
+      "code_snippets": {}
+    },
+    "ml-model-server": {
+      "dependencies": [
+        "feature-store"
+      ],
+      "dependents": [
+        "recommendations-service"
+      ],
+      "logs": [
+        {
+          "timestamp": "2026-04-02T10:55:00Z",
+          "severity": "info",
+          "message": "ensemble inference nominal"
+        },
+        {
+          "timestamp": "2026-04-02T11:01:00Z",
+          "severity": "info",
+          "message": "inference completing successfully — no error path triggered"
+        }
+      ],
+      "metrics": {
+        "latency_p99": [
+          {
+            "ts": "10:55",
+            "val": 180
+          },
+          {
+            "ts": "11:00",
+            "val": 250
+          },
+          {
+            "ts": "11:02",
+            "val": 310
+          },
+          {
+            "ts": "11:04",
+            "val": 390
+          }
+        ],
+        "cpu": [
+          {
+            "ts": "10:55",
+            "val": 45
+          },
+          {
+            "ts": "11:00",
+            "val": 68
+          },
+          {
+            "ts": "11:02",
+            "val": 78
+          },
+          {
+            "ts": "11:04",
+            "val": 84
+          }
+        ],
+        "memory": [
+          {
+            "ts": "10:55",
+            "val": 52
+          },
+          {
+            "ts": "11:00",
+            "val": 74
+          },
+          {
+            "ts": "11:04",
+            "val": 81
+          }
+        ]
+      },
+      "status": {
+        "health": "degraded",
+        "uptime": "99.9%",
+        "active_alerts": []
+      },
+      "deploys": [
+        {
+          "timestamp": "2026-04-02T10:30:00Z",
+          "author": "ml-eng-priya",
+          "diff_summary": "v1.8: increase ENSEMBLE_SIZE 3→7 under A/B flag",
+          "diff_patch": "# see recommendations-service deploy"
+        }
+      ],
+      "code_snippets": {
+        "model_server.py": "ENSEMBLE_SIZE = 7  # bumped from 3 in v1.8 A/B test\n\ndef predict(features):\n    # serial ensemble — no parallelism\n    return [m.predict(features) for m in models[:ENSEMBLE_SIZE]]"
+      }
+    },
+    "feature-store": {
+      "dependencies": [],
+      "dependents": [
+        "ml-model-server",
+        "recommendations-service"
+      ],
+      "logs": [
+        {
+          "timestamp": "2026-04-02T11:00:00Z",
+          "severity": "info",
+          "message": "feature reads nominal"
+        }
+      ],
+      "metrics": {
+        "latency_p99": [
+          {
+            "ts": "11:00",
+            "val": 40
+          },
+          {
+            "ts": "11:04",
+            "val": 42
+          }
+        ]
+      },
+      "status": {
+        "health": "healthy",
+        "uptime": "100%",
+        "active_alerts": []
+      },
+      "deploys": [],
+      "code_snippets": {}
+    }
+  },
+  "timeline": [
+    {
+      "at_step": 3,
+      "event": "slo_burn",
+      "service": "ml-model-server",
+      "visible": false,
+      "payload": {
+        "burn_rate_x": 4.0
+      }
+    },
+    {
+      "at_step": 6,
+      "event": "new_log",
+      "service": "ml-model-server",
+      "visible": false,
+      "payload": {
+        "severity": "warn",
+        "message": "serial inference of 7-model ensemble saturating 2 CPU cores"
+      }
+    },
+    {
+      "at_step": 10,
+      "event": "new_log",
+      "service": "ml-model-server",
+      "visible": false,
+      "payload": {
+        "severity": "warn",
+        "message": "CPU headroom exhausted; p99 now 2.3x baseline"
+      }
+    },
+    {
+      "at_step": 14,
+      "event": "slo_burn",
+      "service": "recommendations-service",
+      "visible": false,
+      "payload": {
+        "burn_rate_x": 3.0
+      }
+    }
+  ],
+  "policies": [
+    {
+      "id": "bonus-rollback-for-model-regression",
+      "when": {
+        "app": "system",
+        "op": "submit_diagnosis",
+        "args_match": {
+          "remediation": "rollback_deploy"
+        }
+      },
+      "bonus": 0.1
+    }
+  ],
+  "alerthub": {
+    "alerts": [
+      {
+        "id": "PG-SR-1",
+        "service": "recommendations-service",
+        "message": "p99 latency drifting upward — no error signal",
+        "severity": "warning",
+        "fire_time": "2026-04-02T11:00:00Z"
+      }
+    ]
+  },
+  "chatops": {
+    "oncall_lead": "ml-oncall-devi",
+    "channels": {
+      "incidents": [
+        {
+          "user": "ml-oncall-devi",
+          "ts": "11:00",
+          "text": "latency creep on recs — no obvious culprit yet"
+        }
+      ]
+    }
+  },
+  "ticketdesk": {
+    "tickets": [
+      {
+        "id": "INC-4001",
+        "title": "recommendations latency drift",
+        "body": "p99 slowly climbing; no error signature",
+        "severity": "sev3",
+        "status": "open"
+      },
+      {
+        "id": "ML-412",
+        "title": "v1.8 A/B: ensemble 3→7",
+        "body": "Canary at 10%, now at 100%; no reported regressions",
+        "severity": "minor",
+        "status": "in_progress"
+      }
+    ]
+  },
+  "obsly": {
+    "traces": {
+      "trace-rec-1": {
+        "trace_id": "trace-rec-1",
+        "duration_ms": 420,
+        "spans": [
+          {
+            "name": "recommendations.infer",
+            "ms": 420,
+            "status": "ok"
+          },
+          {
+            "name": "ml-model-server.predict",
+            "ms": 390,
+            "status": "ok",
+            "note": "7 sequential model calls"
+          },
+          {
+            "name": "feature-store.get",
+            "ms": 42,
+            "status": "ok"
+          }
+        ]
+      }
+    }
+  },
+  "evidence_labels": {
+    "ml-model-server": {
+      "query_logs": "contextual",
+      "query_metrics": "direct_evidence",
+      "check_deploys": "direct_evidence",
+      "trace_dependencies": "contextual",
+      "check_status": "contextual",
+      "inspect_code": "direct_evidence"
+    },
+    "recommendations-service": {
+      "query_logs": "contextual",
+      "query_metrics": "direct_evidence",
+      "check_deploys": "contextual",
+      "trace_dependencies": "contextual",
+      "check_status": "contextual",
+      "inspect_code": "contextual"
+    },
+    "feature-store": {
+      "query_logs": "contextual",
+      "query_metrics": "contextual",
+      "check_deploys": "contextual",
+      "trace_dependencies": "contextual",
+      "check_status": "contextual",
+      "inspect_code": "contextual"
+    }
+  },
+  "ground_truth": {
+    "root_cause_service": "ml-model-server",
+    "root_cause_category": "bad_deploy",
+    "remediation": "rollback_deploy",
+    "causal_chain": [
+      "v1.8 deploy increased ensemble size from 3 to 7 models",
+      "serial (non-parallel) inference path saturates CPU at 7 models",
+      "p99 latency drifts upward without raising any error",
+      "downstream recommendations-service p99 climbs in lockstep"
+    ],
+    "red_herrings": [
+      "feature-store latency is flat — not causal",
+      "no error logs on any service — easy to miss by log-only search"
+    ],
+    "evidence_services": [
+      "ml-model-server",
+      "recommendations-service"
+    ],
+    "anomalous_services": [
+      "ml-model-server",
+      "recommendations-service"
+    ],
+    "failure_family": "stealth metric regression, no error signal",
+    "correct_pr": {
+      "target_repo": "ml-platform/ml-model-server",
+      "touched_files": [
+        "model_server.py"
+      ],
+      "keywords": [
+        "revert",
+        "rollback",
+        "ensemble_size",
+        "v1.8"
+      ]
+    },
+    "correct_blast_radius": {
+      "affected_services": [
+        "recommendations-service",
+        "ml-model-server"
+      ],
+      "estimated_requests_failed": 500,
+      "missed_regions": [],
+      "outage_window_start": "2026-04-02T11:00:00Z",
+      "outage_window_end": "2026-04-02T11:30:00Z"
+    }
+  }
+}

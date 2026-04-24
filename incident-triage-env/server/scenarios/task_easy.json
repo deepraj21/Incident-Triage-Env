@@ -11,51 +11,264 @@
   },
   "services": {
     "payments-service": {
-      "dependencies": ["database"],
-      "dependents": ["api-gateway"],
+      "dependencies": [
+        "database"
+      ],
+      "dependents": [
+        "api-gateway"
+      ],
       "logs": [
-        {"timestamp": "2026-03-26T14:28:00Z", "severity": "info", "message": "PaymentProcessor initialized successfully"},
-        {"timestamp": "2026-03-26T14:29:15Z", "severity": "info", "message": "Processing batch payment request from merchant-42"},
-        {"timestamp": "2026-03-26T14:30:00Z", "severity": "info", "message": "Health check passed — all systems nominal"},
-        {"timestamp": "2026-03-26T14:31:00Z", "severity": "info", "message": "Deploy v2.14.1 rolling out — 50% traffic shifted"},
-        {"timestamp": "2026-03-26T14:31:30Z", "severity": "info", "message": "Deploy v2.14.1 complete — 100% traffic on new version"},
-        {"timestamp": "2026-03-26T14:32:01Z", "severity": "error", "message": "NullPointerException in PaymentProcessor.process() at line 47: account.validate() called on null reference"},
-        {"timestamp": "2026-03-26T14:32:02Z", "severity": "error", "message": "NullPointerException in PaymentProcessor.process() at line 47: account.validate() called on null reference"},
-        {"timestamp": "2026-03-26T14:32:05Z", "severity": "error", "message": "Request failed: POST /api/v1/payments — 500 Internal Server Error"},
-        {"timestamp": "2026-03-26T14:32:08Z", "severity": "warn", "message": "Error rate threshold exceeded: 5% (threshold: 2%)"},
-        {"timestamp": "2026-03-26T14:32:15Z", "severity": "error", "message": "NullPointerException in PaymentProcessor.process() at line 47: account.validate() called on null reference"},
-        {"timestamp": "2026-03-26T14:32:30Z", "severity": "error", "message": "Circuit breaker OPEN for PaymentProcessor — too many failures in 30s window"},
-        {"timestamp": "2026-03-26T14:33:00Z", "severity": "error", "message": "NullPointerException in PaymentProcessor.process() at line 47: account.validate() called on null reference"},
-        {"timestamp": "2026-03-26T14:33:15Z", "severity": "warn", "message": "Error rate now at 15.2% — PagerDuty alert triggered"},
-        {"timestamp": "2026-03-26T14:33:30Z", "severity": "error", "message": "Request failed: POST /api/v1/payments — 500 Internal Server Error"},
-        {"timestamp": "2026-03-26T14:34:00Z", "severity": "error", "message": "NullPointerException in PaymentProcessor.process() at line 47: account.validate() called on null reference"},
-        {"timestamp": "2026-03-26T14:34:30Z", "severity": "warn", "message": "Downstream api-gateway reporting elevated 5xx from payments-service"}
+        {
+          "timestamp": "2026-03-26T14:28:00Z",
+          "severity": "info",
+          "message": "PaymentProcessor initialized successfully"
+        },
+        {
+          "timestamp": "2026-03-26T14:29:15Z",
+          "severity": "info",
+          "message": "Processing batch payment request from merchant-42"
+        },
+        {
+          "timestamp": "2026-03-26T14:30:00Z",
+          "severity": "info",
+          "message": "Health check passed — all systems nominal"
+        },
+        {
+          "timestamp": "2026-03-26T14:31:00Z",
+          "severity": "info",
+          "message": "Deploy v2.14.1 rolling out — 50% traffic shifted"
+        },
+        {
+          "timestamp": "2026-03-26T14:31:30Z",
+          "severity": "info",
+          "message": "Deploy v2.14.1 complete — 100% traffic on new version"
+        },
+        {
+          "timestamp": "2026-03-26T14:32:01Z",
+          "severity": "error",
+          "message": "NullPointerException in PaymentProcessor.process() at line 47: account.validate() called on null reference"
+        },
+        {
+          "timestamp": "2026-03-26T14:32:02Z",
+          "severity": "error",
+          "message": "NullPointerException in PaymentProcessor.process() at line 47: account.validate() called on null reference"
+        },
+        {
+          "timestamp": "2026-03-26T14:32:05Z",
+          "severity": "error",
+          "message": "Request failed: POST /api/v1/payments — 500 Internal Server Error"
+        },
+        {
+          "timestamp": "2026-03-26T14:32:08Z",
+          "severity": "warn",
+          "message": "Error rate threshold exceeded: 5% (threshold: 2%)"
+        },
+        {
+          "timestamp": "2026-03-26T14:32:15Z",
+          "severity": "error",
+          "message": "NullPointerException in PaymentProcessor.process() at line 47: account.validate() called on null reference"
+        },
+        {
+          "timestamp": "2026-03-26T14:32:30Z",
+          "severity": "error",
+          "message": "Circuit breaker OPEN for PaymentProcessor — too many failures in 30s window"
+        },
+        {
+          "timestamp": "2026-03-26T14:33:00Z",
+          "severity": "error",
+          "message": "NullPointerException in PaymentProcessor.process() at line 47: account.validate() called on null reference"
+        },
+        {
+          "timestamp": "2026-03-26T14:33:15Z",
+          "severity": "warn",
+          "message": "Error rate now at 15.2% — PagerDuty alert triggered"
+        },
+        {
+          "timestamp": "2026-03-26T14:33:30Z",
+          "severity": "error",
+          "message": "Request failed: POST /api/v1/payments — 500 Internal Server Error"
+        },
+        {
+          "timestamp": "2026-03-26T14:34:00Z",
+          "severity": "error",
+          "message": "NullPointerException in PaymentProcessor.process() at line 47: account.validate() called on null reference"
+        },
+        {
+          "timestamp": "2026-03-26T14:34:30Z",
+          "severity": "warn",
+          "message": "Downstream api-gateway reporting elevated 5xx from payments-service"
+        }
       ],
       "metrics": {
         "error_rate": [
-          {"ts": "14:28", "val": 0.1}, {"ts": "14:29", "val": 0.1}, {"ts": "14:30", "val": 0.1},
-          {"ts": "14:31", "val": 0.2}, {"ts": "14:32", "val": 15.2}, {"ts": "14:33", "val": 15.8},
-          {"ts": "14:34", "val": 14.9}, {"ts": "14:35", "val": 15.1}
+          {
+            "ts": "14:28",
+            "val": 0.1
+          },
+          {
+            "ts": "14:29",
+            "val": 0.1
+          },
+          {
+            "ts": "14:30",
+            "val": 0.1
+          },
+          {
+            "ts": "14:31",
+            "val": 0.2
+          },
+          {
+            "ts": "14:32",
+            "val": 15.2
+          },
+          {
+            "ts": "14:33",
+            "val": 15.8
+          },
+          {
+            "ts": "14:34",
+            "val": 14.9
+          },
+          {
+            "ts": "14:35",
+            "val": 15.1
+          }
         ],
         "latency_p99": [
-          {"ts": "14:28", "val": 120}, {"ts": "14:29", "val": 115}, {"ts": "14:30", "val": 118},
-          {"ts": "14:31", "val": 125}, {"ts": "14:32", "val": 890}, {"ts": "14:33", "val": 1200},
-          {"ts": "14:34", "val": 1150}, {"ts": "14:35", "val": 1180}
+          {
+            "ts": "14:28",
+            "val": 120
+          },
+          {
+            "ts": "14:29",
+            "val": 115
+          },
+          {
+            "ts": "14:30",
+            "val": 118
+          },
+          {
+            "ts": "14:31",
+            "val": 125
+          },
+          {
+            "ts": "14:32",
+            "val": 890
+          },
+          {
+            "ts": "14:33",
+            "val": 1200
+          },
+          {
+            "ts": "14:34",
+            "val": 1150
+          },
+          {
+            "ts": "14:35",
+            "val": 1180
+          }
         ],
         "cpu": [
-          {"ts": "14:28", "val": 35}, {"ts": "14:29", "val": 38}, {"ts": "14:30", "val": 36},
-          {"ts": "14:31", "val": 40}, {"ts": "14:32", "val": 42}, {"ts": "14:33", "val": 41},
-          {"ts": "14:34", "val": 39}, {"ts": "14:35", "val": 40}
+          {
+            "ts": "14:28",
+            "val": 35
+          },
+          {
+            "ts": "14:29",
+            "val": 38
+          },
+          {
+            "ts": "14:30",
+            "val": 36
+          },
+          {
+            "ts": "14:31",
+            "val": 40
+          },
+          {
+            "ts": "14:32",
+            "val": 42
+          },
+          {
+            "ts": "14:33",
+            "val": 41
+          },
+          {
+            "ts": "14:34",
+            "val": 39
+          },
+          {
+            "ts": "14:35",
+            "val": 40
+          }
         ],
         "memory": [
-          {"ts": "14:28", "val": 62}, {"ts": "14:29", "val": 62}, {"ts": "14:30", "val": 63},
-          {"ts": "14:31", "val": 63}, {"ts": "14:32", "val": 64}, {"ts": "14:33", "val": 64},
-          {"ts": "14:34", "val": 64}, {"ts": "14:35", "val": 65}
+          {
+            "ts": "14:28",
+            "val": 62
+          },
+          {
+            "ts": "14:29",
+            "val": 62
+          },
+          {
+            "ts": "14:30",
+            "val": 63
+          },
+          {
+            "ts": "14:31",
+            "val": 63
+          },
+          {
+            "ts": "14:32",
+            "val": 64
+          },
+          {
+            "ts": "14:33",
+            "val": 64
+          },
+          {
+            "ts": "14:34",
+            "val": 64
+          },
+          {
+            "ts": "14:35",
+            "val": 65
+          }
         ],
         "connections": [
-          {"ts": "14:28", "val": 45}, {"ts": "14:29", "val": 48}, {"ts": "14:30", "val": 46},
-          {"ts": "14:31", "val": 50}, {"ts": "14:32", "val": 52}, {"ts": "14:33", "val": 51},
-          {"ts": "14:34", "val": 49}, {"ts": "14:35", "val": 50}
+          {
+            "ts": "14:28",
+            "val": 45
+          },
+          {
+            "ts": "14:29",
+            "val": 48
+          },
+          {
+            "ts": "14:30",
+            "val": 46
+          },
+          {
+            "ts": "14:31",
+            "val": 50
+          },
+          {
+            "ts": "14:32",
+            "val": 52
+          },
+          {
+            "ts": "14:33",
+            "val": 51
+          },
+          {
+            "ts": "14:34",
+            "val": 49
+          },
+          {
+            "ts": "14:35",
+            "val": 50
+          }
         ]
       },
       "deploys": [
@@ -72,38 +285,129 @@
       "status": {
         "health": "degraded",
         "uptime": "99.2%",
-        "active_alerts": ["HTTP 500 spike", "Error rate > 2%"]
+        "active_alerts": [
+          "HTTP 500 spike",
+          "Error rate > 2%"
+        ]
       }
     },
     "database": {
       "dependencies": [],
-      "dependents": ["payments-service"],
+      "dependents": [
+        "payments-service"
+      ],
       "logs": [
-        {"timestamp": "2026-03-26T14:28:00Z", "severity": "info", "message": "Connection pool stats: active=12, idle=88, max=100"},
-        {"timestamp": "2026-03-26T14:30:00Z", "severity": "info", "message": "Slow query log: 0 queries > 500ms in last 5 min"},
-        {"timestamp": "2026-03-26T14:32:00Z", "severity": "info", "message": "Connection pool stats: active=14, idle=86, max=100"},
-        {"timestamp": "2026-03-26T14:34:00Z", "severity": "info", "message": "Replication lag: 0.2ms — within SLA"}
+        {
+          "timestamp": "2026-03-26T14:28:00Z",
+          "severity": "info",
+          "message": "Connection pool stats: active=12, idle=88, max=100"
+        },
+        {
+          "timestamp": "2026-03-26T14:30:00Z",
+          "severity": "info",
+          "message": "Slow query log: 0 queries > 500ms in last 5 min"
+        },
+        {
+          "timestamp": "2026-03-26T14:32:00Z",
+          "severity": "info",
+          "message": "Connection pool stats: active=14, idle=86, max=100"
+        },
+        {
+          "timestamp": "2026-03-26T14:34:00Z",
+          "severity": "info",
+          "message": "Replication lag: 0.2ms — within SLA"
+        }
       ],
       "metrics": {
         "error_rate": [
-          {"ts": "14:28", "val": 0.0}, {"ts": "14:30", "val": 0.0},
-          {"ts": "14:32", "val": 0.0}, {"ts": "14:34", "val": 0.0}
+          {
+            "ts": "14:28",
+            "val": 0.0
+          },
+          {
+            "ts": "14:30",
+            "val": 0.0
+          },
+          {
+            "ts": "14:32",
+            "val": 0.0
+          },
+          {
+            "ts": "14:34",
+            "val": 0.0
+          }
         ],
         "latency_p99": [
-          {"ts": "14:28", "val": 8}, {"ts": "14:30", "val": 7},
-          {"ts": "14:32", "val": 9}, {"ts": "14:34", "val": 8}
+          {
+            "ts": "14:28",
+            "val": 8
+          },
+          {
+            "ts": "14:30",
+            "val": 7
+          },
+          {
+            "ts": "14:32",
+            "val": 9
+          },
+          {
+            "ts": "14:34",
+            "val": 8
+          }
         ],
         "cpu": [
-          {"ts": "14:28", "val": 22}, {"ts": "14:30", "val": 23},
-          {"ts": "14:32", "val": 24}, {"ts": "14:34", "val": 23}
+          {
+            "ts": "14:28",
+            "val": 22
+          },
+          {
+            "ts": "14:30",
+            "val": 23
+          },
+          {
+            "ts": "14:32",
+            "val": 24
+          },
+          {
+            "ts": "14:34",
+            "val": 23
+          }
         ],
         "memory": [
-          {"ts": "14:28", "val": 55}, {"ts": "14:30", "val": 55},
-          {"ts": "14:32", "val": 56}, {"ts": "14:34", "val": 56}
+          {
+            "ts": "14:28",
+            "val": 55
+          },
+          {
+            "ts": "14:30",
+            "val": 55
+          },
+          {
+            "ts": "14:32",
+            "val": 56
+          },
+          {
+            "ts": "14:34",
+            "val": 56
+          }
         ],
         "connections": [
-          {"ts": "14:28", "val": 12}, {"ts": "14:30", "val": 13},
-          {"ts": "14:32", "val": 14}, {"ts": "14:34", "val": 13}
+          {
+            "ts": "14:28",
+            "val": 12
+          },
+          {
+            "ts": "14:30",
+            "val": 13
+          },
+          {
+            "ts": "14:32",
+            "val": 14
+          },
+          {
+            "ts": "14:34",
+            "val": 13
+          }
         ]
       },
       "deploys": [],
@@ -115,34 +419,122 @@
       }
     },
     "api-gateway": {
-      "dependencies": ["payments-service"],
+      "dependencies": [
+        "payments-service"
+      ],
       "dependents": [],
       "logs": [
-        {"timestamp": "2026-03-26T14:28:00Z", "severity": "info", "message": "Routing traffic normally — all backends healthy"},
-        {"timestamp": "2026-03-26T14:32:10Z", "severity": "warn", "message": "Backend payments-service returning 5xx — 15% of requests affected"},
-        {"timestamp": "2026-03-26T14:33:00Z", "severity": "warn", "message": "Upstream health check: payments-service marked degraded"},
-        {"timestamp": "2026-03-26T14:34:00Z", "severity": "info", "message": "Rate limiting applied to payments-service route — shedding excess traffic"}
+        {
+          "timestamp": "2026-03-26T14:28:00Z",
+          "severity": "info",
+          "message": "Routing traffic normally — all backends healthy"
+        },
+        {
+          "timestamp": "2026-03-26T14:32:10Z",
+          "severity": "warn",
+          "message": "Backend payments-service returning 5xx — 15% of requests affected"
+        },
+        {
+          "timestamp": "2026-03-26T14:33:00Z",
+          "severity": "warn",
+          "message": "Upstream health check: payments-service marked degraded"
+        },
+        {
+          "timestamp": "2026-03-26T14:34:00Z",
+          "severity": "info",
+          "message": "Rate limiting applied to payments-service route — shedding excess traffic"
+        }
       ],
       "metrics": {
         "error_rate": [
-          {"ts": "14:28", "val": 0.1}, {"ts": "14:30", "val": 0.1},
-          {"ts": "14:32", "val": 4.2}, {"ts": "14:34", "val": 4.0}
+          {
+            "ts": "14:28",
+            "val": 0.1
+          },
+          {
+            "ts": "14:30",
+            "val": 0.1
+          },
+          {
+            "ts": "14:32",
+            "val": 4.2
+          },
+          {
+            "ts": "14:34",
+            "val": 4.0
+          }
         ],
         "latency_p99": [
-          {"ts": "14:28", "val": 200}, {"ts": "14:30", "val": 195},
-          {"ts": "14:32", "val": 950}, {"ts": "14:34", "val": 920}
+          {
+            "ts": "14:28",
+            "val": 200
+          },
+          {
+            "ts": "14:30",
+            "val": 195
+          },
+          {
+            "ts": "14:32",
+            "val": 950
+          },
+          {
+            "ts": "14:34",
+            "val": 920
+          }
         ],
         "cpu": [
-          {"ts": "14:28", "val": 28}, {"ts": "14:30", "val": 30},
-          {"ts": "14:32", "val": 32}, {"ts": "14:34", "val": 31}
+          {
+            "ts": "14:28",
+            "val": 28
+          },
+          {
+            "ts": "14:30",
+            "val": 30
+          },
+          {
+            "ts": "14:32",
+            "val": 32
+          },
+          {
+            "ts": "14:34",
+            "val": 31
+          }
         ],
         "memory": [
-          {"ts": "14:28", "val": 40}, {"ts": "14:30", "val": 41},
-          {"ts": "14:32", "val": 42}, {"ts": "14:34", "val": 42}
+          {
+            "ts": "14:28",
+            "val": 40
+          },
+          {
+            "ts": "14:30",
+            "val": 41
+          },
+          {
+            "ts": "14:32",
+            "val": 42
+          },
+          {
+            "ts": "14:34",
+            "val": 42
+          }
         ],
         "connections": [
-          {"ts": "14:28", "val": 120}, {"ts": "14:30", "val": 125},
-          {"ts": "14:32", "val": 130}, {"ts": "14:34", "val": 128}
+          {
+            "ts": "14:28",
+            "val": 120
+          },
+          {
+            "ts": "14:30",
+            "val": 125
+          },
+          {
+            "ts": "14:32",
+            "val": 130
+          },
+          {
+            "ts": "14:34",
+            "val": 128
+          }
         ]
       },
       "deploys": [],
@@ -184,10 +576,141 @@
     "root_cause_service": "payments-service",
     "root_cause_category": "bad_deploy",
     "remediation": "rollback_deploy",
-    "causal_chain": ["payments-service"],
+    "causal_chain": [
+      "payments-service"
+    ],
     "red_herrings": [],
-    "evidence_services": ["payments-service"],
-    "anomalous_services": ["payments-service"],
-    "failure_family": "change-induced"
+    "evidence_services": [
+      "payments-service"
+    ],
+    "anomalous_services": [
+      "payments-service"
+    ],
+    "failure_family": "change-induced",
+    "correct_pr": {
+      "target_repo": "fintra/payments-service",
+      "touched_files": [
+        "PaymentProcessor.java"
+      ],
+      "keywords": [
+        "revert",
+        "rollback",
+        "v2.1",
+        "npe"
+      ]
+    },
+    "correct_blast_radius": {
+      "affected_services": [
+        "payments-service",
+        "api-gateway"
+      ],
+      "estimated_requests_failed": 3000,
+      "missed_regions": [],
+      "outage_window_start": "2026-03-26T14:32:00Z",
+      "outage_window_end": "2026-03-26T14:47:00Z"
+    }
+  },
+  "clock": {
+    "start": "2026-03-26T14:32:00Z",
+    "step_seconds": 30
+  },
+  "tags": [],
+  "timeline": [
+    {
+      "at_step": 3,
+      "event": "new_log",
+      "service": "payments-service",
+      "payload": {
+        "severity": "warn",
+        "message": "gold-tier merchant escalation: batch checkout blocked"
+      }
+    },
+    {
+      "at_step": 6,
+      "event": "oncall_handoff",
+      "payload": {
+        "from": "alice-sre",
+        "to": "bob-sre"
+      }
+    }
+  ],
+  "policies": [
+    {
+      "id": "page-before-rollback",
+      "when": {
+        "app": "system",
+        "op": "submit_diagnosis",
+        "args_match": {
+          "remediation": "rollback_deploy"
+        }
+      },
+      "require_prior": {
+        "app": "chatops",
+        "op": "page_oncall"
+      },
+      "require_prior_within_steps": 6,
+      "penalty": -0.2,
+      "bonus": 0.1
+    }
+  ],
+  "alerthub": {
+    "alerts": [
+      {
+        "id": "PG-ALERT-1",
+        "service": "payments-service",
+        "message": "HTTP 500 rate spike — 15% of requests failing since 14:32 UTC",
+        "severity": "critical",
+        "fire_time": "2026-03-26T14:32:00Z"
+      }
+    ]
+  },
+  "chatops": {
+    "oncall_lead": "alice-sre",
+    "channels": {
+      "incidents": [
+        {
+          "user": "alice-sre",
+          "ts": "14:32",
+          "text": "PagerDuty fired on payments — looking"
+        },
+        {
+          "user": "merchant-support",
+          "ts": "14:34",
+          "text": "gold-tier merchant-42 reports checkout broken"
+        }
+      ]
+    }
+  },
+  "ticketdesk": {
+    "tickets": [
+      {
+        "id": "INC-1001",
+        "title": "payments-service 500 spike",
+        "body": "PagerDuty alert fired at 14:32Z; error rate 15%; investigation active",
+        "severity": "sev1",
+        "status": "open"
+      }
+    ]
+  },
+  "obsly": {
+    "traces": {
+      "trace-pay-1": {
+        "trace_id": "trace-pay-1",
+        "duration_ms": 1180,
+        "spans": [
+          {
+            "name": "api-gateway.POST /v1/payments",
+            "ms": 1180,
+            "status": "error"
+          },
+          {
+            "name": "payments-service.process",
+            "ms": 1175,
+            "status": "error",
+            "error": "NullPointerException at PaymentProcessor.java:47"
+          }
+        ]
+      }
+    }
   }
 }

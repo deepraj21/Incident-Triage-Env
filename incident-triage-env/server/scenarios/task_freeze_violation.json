@@ -1,0 +1,354 @@
+{
+  "task_id": "hard_freeze_violation",
+  "task_name": "Change-Freeze Rollback Only",
+  "difficulty": "hard",
+  "step_budget": 15,
+  "clock": {
+    "start": "2026-03-27T02:10:00Z",
+    "step_seconds": 30
+  },
+  "tags": [
+    "change_freeze"
+  ],
+  "alert": {
+    "service": "orders-service",
+    "message": "order-placement failures spiking — error_rate 11% since 02:08 UTC (change-freeze window active)",
+    "severity": "critical",
+    "timestamp": "2026-03-27T02:10:00Z"
+  },
+  "services": {
+    "orders-service": {
+      "dependencies": [
+        "database",
+        "api-gateway"
+      ],
+      "dependents": [],
+      "logs": [
+        {
+          "timestamp": "2026-03-27T02:05:00Z",
+          "severity": "info",
+          "message": "Health check nominal — pre-freeze rollout v8.2 active"
+        },
+        {
+          "timestamp": "2026-03-27T02:07:30Z",
+          "severity": "info",
+          "message": "Change-freeze window began 2026-03-27T02:00Z — rollbacks allowed, forward-fix blocked per policy"
+        },
+        {
+          "timestamp": "2026-03-27T02:08:00Z",
+          "severity": "error",
+          "message": "OrderService.placeOrder failing: IllegalArgumentException on discount_code field"
+        },
+        {
+          "timestamp": "2026-03-27T02:08:10Z",
+          "severity": "error",
+          "message": "OrderService.placeOrder failing: IllegalArgumentException on discount_code field"
+        },
+        {
+          "timestamp": "2026-03-27T02:08:30Z",
+          "severity": "warn",
+          "message": "Error rate crossed 5% threshold"
+        },
+        {
+          "timestamp": "2026-03-27T02:09:00Z",
+          "severity": "error",
+          "message": "OrderService.placeOrder failing: IllegalArgumentException on discount_code field"
+        },
+        {
+          "timestamp": "2026-03-27T02:09:45Z",
+          "severity": "error",
+          "message": "Customer-facing 500s — order submission broken"
+        }
+      ],
+      "metrics": {
+        "error_rate": [
+          {
+            "ts": "02:05",
+            "val": 0.1
+          },
+          {
+            "ts": "02:06",
+            "val": 0.1
+          },
+          {
+            "ts": "02:07",
+            "val": 0.2
+          },
+          {
+            "ts": "02:08",
+            "val": 11.2
+          },
+          {
+            "ts": "02:09",
+            "val": 12.1
+          }
+        ],
+        "latency_p99": [
+          {
+            "ts": "02:05",
+            "val": 130
+          },
+          {
+            "ts": "02:08",
+            "val": 450
+          }
+        ]
+      },
+      "status": {
+        "health": "degraded",
+        "uptime": "99.1%",
+        "active_alerts": [
+          "PG-FZ-1"
+        ]
+      },
+      "deploys": [
+        {
+          "timestamp": "2026-03-27T01:55:00Z",
+          "author": "dev-rahul",
+          "diff_summary": "v8.2: add optional discount_code validation to OrderService.placeOrder — last deploy before freeze",
+          "diff_patch": "@@ OrderService.java @@\n+ if (req.discount_code != null && !req.discount_code.matches(\"[A-Z0-9]{4,12}\")) {\n+   throw new IllegalArgumentException(\"bad discount_code\");\n+ }"
+        },
+        {
+          "timestamp": "2026-03-26T21:00:00Z",
+          "author": "dev-rahul",
+          "diff_summary": "v8.1: stable build (rollback target)",
+          "diff_patch": "# stable build"
+        }
+      ],
+      "code_snippets": {
+        "OrderService.java": "public Order placeOrder(OrderRequest req) {\n  // v8.2 added this block — too strict, rejects null-safe optional paths\n  if (req.discount_code != null && !req.discount_code.matches(\"[A-Z0-9]{4,12}\")) {\n    throw new IllegalArgumentException(\"bad discount_code\");\n  }\n  return persist(req);\n}"
+      }
+    },
+    "database": {
+      "dependencies": [],
+      "dependents": [
+        "orders-service"
+      ],
+      "logs": [
+        {
+          "timestamp": "2026-03-27T02:08:00Z",
+          "severity": "info",
+          "message": "db healthy; no query errors"
+        }
+      ],
+      "metrics": {
+        "cpu": [
+          {
+            "ts": "02:08",
+            "val": 38
+          }
+        ]
+      },
+      "status": {
+        "health": "healthy",
+        "uptime": "100%",
+        "active_alerts": []
+      },
+      "deploys": [],
+      "code_snippets": {}
+    },
+    "api-gateway": {
+      "dependencies": [
+        "orders-service"
+      ],
+      "dependents": [],
+      "logs": [
+        {
+          "timestamp": "2026-03-27T02:08:15Z",
+          "severity": "warn",
+          "message": "forwarding 500s from orders-service"
+        }
+      ],
+      "metrics": {
+        "error_rate": [
+          {
+            "ts": "02:08",
+            "val": 11.0
+          }
+        ]
+      },
+      "status": {
+        "health": "degraded",
+        "uptime": "99.4%",
+        "active_alerts": []
+      },
+      "deploys": [],
+      "code_snippets": {}
+    }
+  },
+  "timeline": [
+    {
+      "at_step": 2,
+      "event": "new_log",
+      "service": "orders-service",
+      "payload": {
+        "severity": "warn",
+        "message": "CHANGE-FREEZE notice — only rollback remediations authorized until 2026-03-27T06:00Z"
+      }
+    },
+    {
+      "at_step": 6,
+      "event": "slo_burn",
+      "service": "orders-service",
+      "payload": {
+        "burn_rate_x": 9.0
+      }
+    }
+  ],
+  "policies": [
+    {
+      "id": "forbid-pr-during-freeze",
+      "when": {
+        "app": "repohub",
+        "op": "open_pr"
+      },
+      "forbidden_if": {
+        "scenario_tag": "change_freeze"
+      },
+      "penalty": -0.35
+    },
+    {
+      "id": "bonus-rollback-during-freeze",
+      "when": {
+        "app": "system",
+        "op": "submit_diagnosis",
+        "args_match": {
+          "remediation": "rollback_deploy"
+        }
+      },
+      "bonus": 0.15
+    },
+    {
+      "id": "page-before-rollback",
+      "when": {
+        "app": "system",
+        "op": "submit_diagnosis",
+        "args_match": {
+          "remediation": "rollback_deploy"
+        }
+      },
+      "require_prior": {
+        "app": "chatops",
+        "op": "page_oncall"
+      },
+      "require_prior_within_steps": 8,
+      "penalty": -0.15,
+      "bonus": 0.05
+    }
+  ],
+  "alerthub": {
+    "alerts": [
+      {
+        "id": "PG-FZ-1",
+        "service": "orders-service",
+        "message": "order placement 500s at 11% — freeze window active",
+        "severity": "critical",
+        "fire_time": "2026-03-27T02:10:00Z"
+      }
+    ]
+  },
+  "chatops": {
+    "oncall_lead": "freeze-captain-kim",
+    "channels": {
+      "incidents": [
+        {
+          "user": "freeze-captain-kim",
+          "ts": "02:08",
+          "text": "We're in freeze — rollback-only. Need rapid call."
+        }
+      ]
+    }
+  },
+  "ticketdesk": {
+    "tickets": [
+      {
+        "id": "INC-3001",
+        "title": "orders-service 500s during freeze window",
+        "body": "v8.2 suspected; freeze policy mandates rollback only",
+        "severity": "sev1",
+        "status": "open"
+      },
+      {
+        "id": "POL-777",
+        "title": "Change-Freeze Policy",
+        "body": "No forward-fix PRs during declared freeze windows; rollback only. Violations logged.",
+        "severity": "reference",
+        "status": "open"
+      }
+    ]
+  },
+  "obsly": {
+    "traces": {}
+  },
+  "evidence_labels": {
+    "orders-service": {
+      "query_logs": "direct_evidence",
+      "query_metrics": "direct_evidence",
+      "check_deploys": "direct_evidence",
+      "trace_dependencies": "contextual",
+      "check_status": "contextual",
+      "inspect_code": "direct_evidence"
+    },
+    "database": {
+      "query_logs": "contextual",
+      "query_metrics": "contextual",
+      "check_deploys": "contextual",
+      "trace_dependencies": "contextual",
+      "check_status": "contextual",
+      "inspect_code": "contextual"
+    },
+    "api-gateway": {
+      "query_logs": "contextual",
+      "query_metrics": "contextual",
+      "check_deploys": "contextual",
+      "trace_dependencies": "contextual",
+      "check_status": "contextual",
+      "inspect_code": "contextual"
+    }
+  },
+  "ground_truth": {
+    "root_cause_service": "orders-service",
+    "root_cause_category": "bad_deploy",
+    "remediation": "rollback_deploy",
+    "causal_chain": [
+      "v8.2 deploy added strict discount_code regex validation",
+      "existing clients sending older-format codes now hit IllegalArgumentException",
+      "order placement 500 rate jumped to 11%",
+      "change-freeze is active — only rollback to v8.1 is allowed"
+    ],
+    "red_herrings": [
+      "database load is normal",
+      "api-gateway just forwards the orders-service errors"
+    ],
+    "evidence_services": [
+      "orders-service"
+    ],
+    "anomalous_services": [
+      "orders-service",
+      "api-gateway"
+    ],
+    "failure_family": "freeze-window bad-deploy, forward-fix forbidden",
+    "correct_pr": {
+      "target_repo": "commerce/orders-service",
+      "touched_files": [
+        "OrderService.java"
+      ],
+      "keywords": [
+        "revert",
+        "rollback",
+        "v8.1",
+        "discount_code"
+      ]
+    },
+    "correct_blast_radius": {
+      "affected_services": [
+        "orders-service",
+        "api-gateway"
+      ],
+      "estimated_requests_failed": 4000,
+      "missed_regions": [],
+      "outage_window_start": "2026-03-27T02:08:00Z",
+      "outage_window_end": "2026-03-27T02:30:00Z"
+    }
+  }
+}

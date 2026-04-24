@@ -56,4 +56,5 @@ Thumbs.db
 # .idea/
 # .vscode/
 
-hf-deploy/
+hf-deploy/__pycache__/
+*.pyc

@@ -1,0 +1,432 @@
+{
+  "task_id": "hard_region_failover",
+  "task_name": "Missed Region Failover",
+  "difficulty": "hard",
+  "step_budget": 18,
+  "clock": {
+    "start": "2026-03-26T09:15:00Z",
+    "step_seconds": 30
+  },
+  "tags": [],
+  "alert": {
+    "service": "api-gateway",
+    "message": "us-east-1 5xx spike — regional traffic stuck, failover not triggered",
+    "severity": "critical",
+    "timestamp": "2026-03-26T09:15:00Z"
+  },
+  "services": {
+    "api-gateway": {
+      "dependencies": [
+        "traffic-router",
+        "payments-service"
+      ],
+      "dependents": [],
+      "logs": [
+        {
+          "timestamp": "2026-03-26T09:13:00Z",
+          "severity": "info",
+          "message": "Health checks nominal across all three regions"
+        },
+        {
+          "timestamp": "2026-03-26T09:15:01Z",
+          "severity": "error",
+          "message": "us-east-1 upstream connect timeout to traffic-router"
+        },
+        {
+          "timestamp": "2026-03-26T09:15:05Z",
+          "severity": "error",
+          "message": "us-east-1 5xx rate now 22% — expected <1%"
+        },
+        {
+          "timestamp": "2026-03-26T09:15:30Z",
+          "severity": "warn",
+          "message": "us-west-2 and eu-west-1 healthy; failover policy did NOT activate"
+        },
+        {
+          "timestamp": "2026-03-26T09:16:00Z",
+          "severity": "error",
+          "message": "traffic-router returned 'failover disabled' for us-east-1"
+        },
+        {
+          "timestamp": "2026-03-26T09:16:45Z",
+          "severity": "error",
+          "message": "customer impact escalating in us-east-1 region only"
+        }
+      ],
+      "metrics": {
+        "error_rate": [
+          {
+            "ts": "09:13",
+            "val": 0.3
+          },
+          {
+            "ts": "09:14",
+            "val": 0.4
+          },
+          {
+            "ts": "09:15",
+            "val": 22.1
+          },
+          {
+            "ts": "09:16",
+            "val": 21.5
+          },
+          {
+            "ts": "09:17",
+            "val": 22.8
+          }
+        ],
+        "latency_p99": [
+          {
+            "ts": "09:13",
+            "val": 140
+          },
+          {
+            "ts": "09:14",
+            "val": 145
+          },
+          {
+            "ts": "09:15",
+            "val": 2100
+          },
+          {
+            "ts": "09:16",
+            "val": 2250
+          }
+        ]
+      },
+      "status": {
+        "health": "degraded",
+        "uptime": "99.2%",
+        "active_alerts": [
+          "PG-RF-1"
+        ]
+      },
+      "deploys": [
+        {
+          "timestamp": "2026-03-25T17:00:00Z",
+          "author": "platform-alex",
+          "diff_summary": "api-gateway: minor dashboard label fix",
+          "diff_patch": "@@ -1 +1 @@\n- label: error_count\n+ label: error_rate"
+        }
+      ],
+      "code_snippets": {}
+    },
+    "traffic-router": {
+      "dependencies": [],
+      "dependents": [
+        "api-gateway"
+      ],
+      "logs": [
+        {
+          "timestamp": "2026-03-26T09:10:00Z",
+          "severity": "info",
+          "message": "failover config reloaded: active_regions=['us-east-1','us-west-2','eu-west-1']"
+        },
+        {
+          "timestamp": "2026-03-26T09:10:05Z",
+          "severity": "warn",
+          "message": "failover_enabled flag set to FALSE by deploy v4.7 — manual override required to re-enable"
+        },
+        {
+          "timestamp": "2026-03-26T09:15:10Z",
+          "severity": "error",
+          "message": "us-east-1 health probe failing; failover would activate but failover_enabled=false"
+        },
+        {
+          "timestamp": "2026-03-26T09:16:00Z",
+          "severity": "error",
+          "message": "traffic stuck at us-east-1 — no alternate route selected"
+        }
+      ],
+      "metrics": {
+        "error_rate": [
+          {
+            "ts": "09:15",
+            "val": 22.0
+          },
+          {
+            "ts": "09:16",
+            "val": 22.5
+          }
+        ],
+        "latency_p99": [
+          {
+            "ts": "09:15",
+            "val": 2100
+          }
+        ]
+      },
+      "status": {
+        "health": "degraded",
+        "uptime": "99.5%",
+        "active_alerts": [
+          "PG-RF-2"
+        ]
+      },
+      "deploys": [
+        {
+          "timestamp": "2026-03-26T08:45:00Z",
+          "author": "sre-mira",
+          "diff_summary": "v4.7: refactor failover logic — flipped failover_enabled default to false for staged rollout, forgot to re-enable in prod config",
+          "diff_patch": "@@ failover.yaml @@\n- failover_enabled: true\n+ failover_enabled: false  # TODO re-enable after staged test"
+        }
+      ],
+      "code_snippets": {
+        "failover.yaml": "regions:\n  - name: us-east-1\n    priority: 1\n  - name: us-west-2\n    priority: 2\n  - name: eu-west-1\n    priority: 3\nfailover_enabled: false  # <-- this is the bug\n"
+      }
+    },
+    "payments-service": {
+      "dependencies": [],
+      "dependents": [
+        "api-gateway"
+      ],
+      "logs": [
+        {
+          "timestamp": "2026-03-26T09:13:00Z",
+          "severity": "info",
+          "message": "processing nominally in us-west-2 and eu-west-1"
+        },
+        {
+          "timestamp": "2026-03-26T09:15:30Z",
+          "severity": "info",
+          "message": "no errors observed outside us-east-1"
+        }
+      ],
+      "metrics": {
+        "error_rate": [
+          {
+            "ts": "09:13",
+            "val": 0.2
+          },
+          {
+            "ts": "09:15",
+            "val": 0.2
+          }
+        ],
+        "latency_p99": [
+          {
+            "ts": "09:13",
+            "val": 110
+          },
+          {
+            "ts": "09:15",
+            "val": 115
+          }
+        ]
+      },
+      "status": {
+        "health": "healthy",
+        "uptime": "99.9%",
+        "active_alerts": []
+      },
+      "deploys": [],
+      "code_snippets": {}
+    }
+  },
+  "timeline": [
+    {
+      "at_step": 3,
+      "event": "slo_burn",
+      "service": "api-gateway",
+      "payload": {
+        "burn_rate_x": 10.0
+      }
+    },
+    {
+      "at_step": 6,
+      "event": "new_alert",
+      "payload": {
+        "id": "PG-RF-3",
+        "service": "traffic-router",
+        "message": "us-east-1 still stuck — customer escalations in",
+        "severity": "critical"
+      }
+    },
+    {
+      "at_step": 11,
+      "event": "new_log",
+      "service": "traffic-router",
+      "payload": {
+        "severity": "warn",
+        "message": "manual override endpoint /admin/failover still not called"
+      }
+    }
+  ],
+  "policies": [
+    {
+      "id": "page-before-config-fix",
+      "when": {
+        "app": "system",
+        "op": "submit_diagnosis",
+        "args_match": {
+          "remediation": "fix_config"
+        }
+      },
+      "require_prior": {
+        "app": "chatops",
+        "op": "page_oncall"
+      },
+      "require_prior_within_steps": 12,
+      "penalty": -0.2,
+      "bonus": 0.1
+    },
+    {
+      "id": "bonus-open-pr-for-config-fix",
+      "when": {
+        "app": "repohub",
+        "op": "open_pr"
+      },
+      "bonus": 0.1
+    }
+  ],
+  "alerthub": {
+    "alerts": [
+      {
+        "id": "PG-RF-1",
+        "service": "api-gateway",
+        "message": "us-east-1 5xx spike 22% — failover not activated",
+        "severity": "critical",
+        "fire_time": "2026-03-26T09:15:00Z"
+      },
+      {
+        "id": "PG-RF-2",
+        "service": "traffic-router",
+        "message": "failover_enabled=false in prod config — regional outage ongoing",
+        "severity": "critical",
+        "fire_time": "2026-03-26T09:16:00Z"
+      }
+    ]
+  },
+  "chatops": {
+    "oncall_lead": "alex-platform",
+    "channels": {
+      "incidents": [
+        {
+          "user": "alex-platform",
+          "ts": "09:15",
+          "text": "us-east-1 exploding"
+        },
+        {
+          "user": "customer-success",
+          "ts": "09:17",
+          "text": "3 enterprise customers in us-east-1 escalated"
+        }
+      ]
+    }
+  },
+  "ticketdesk": {
+    "tickets": [
+      {
+        "id": "INC-2001",
+        "title": "us-east-1 5xx spike, no failover",
+        "body": "Regional outage; failover_enabled=false suspected root cause",
+        "severity": "sev1",
+        "status": "open"
+      },
+      {
+        "id": "TECH-998",
+        "title": "v4.7 staged rollout tracking",
+        "body": "Track re-enabling failover_enabled post-test in prod config",
+        "severity": "minor",
+        "status": "open"
+      }
+    ]
+  },
+  "obsly": {
+    "traces": {
+      "trace-rf-1": {
+        "trace_id": "trace-rf-1",
+        "duration_ms": 2100,
+        "spans": [
+          {
+            "name": "api-gateway.POST /checkout",
+            "ms": 2100,
+            "status": "error"
+          },
+          {
+            "name": "traffic-router.route",
+            "ms": 2090,
+            "status": "error",
+            "error": "no healthy route: us-east-1 down, failover_enabled=false"
+          }
+        ]
+      }
+    }
+  },
+  "evidence_labels": {
+    "traffic-router": {
+      "query_logs": "direct_evidence",
+      "query_metrics": "contextual",
+      "check_deploys": "direct_evidence",
+      "trace_dependencies": "contextual",
+      "check_status": "contextual",
+      "inspect_code": "direct_evidence"
+    },
+    "api-gateway": {
+      "query_logs": "direct_evidence",
+      "query_metrics": "direct_evidence",
+      "check_deploys": "contextual",
+      "trace_dependencies": "contextual",
+      "check_status": "contextual",
+      "inspect_code": "contextual"
+    },
+    "payments-service": {
+      "query_logs": "contextual",
+      "query_metrics": "contextual",
+      "check_deploys": "contextual",
+      "trace_dependencies": "contextual",
+      "check_status": "contextual",
+      "inspect_code": "contextual"
+    }
+  },
+  "ground_truth": {
+    "root_cause_service": "traffic-router",
+    "root_cause_category": "config_change",
+    "remediation": "fix_config",
+    "causal_chain": [
+      "deploy v4.7 set failover_enabled to false as a staged-rollout flag",
+      "the re-enable step was never performed in prod config",
+      "us-east-1 health probe failed at 09:15Z",
+      "failover did not activate because of the disabled flag",
+      "regional 5xx spike and customer impact ensued"
+    ],
+    "red_herrings": [
+      "minor dashboard label fix deploy on api-gateway (not causal)",
+      "payments-service latency variance in us-west-2 (unrelated)"
+    ],
+    "evidence_services": [
+      "traffic-router",
+      "api-gateway"
+    ],
+    "anomalous_services": [
+      "api-gateway",
+      "traffic-router"
+    ],
+    "failure_family": "misconfigured failover disabled by staged-rollout flag",
+    "correct_pr": {
+      "target_repo": "platform/traffic-router",
+      "touched_files": [
+        "failover.yaml"
+      ],
+      "keywords": [
+        "failover_enabled",
+        "re-enable",
+        "true",
+        "config"
+      ]
+    },
+    "correct_blast_radius": {
+      "affected_services": [
+        "api-gateway",
+        "traffic-router"
+      ],
+      "estimated_requests_failed": 20000,
+      "missed_regions": [
+        "us-east-1"
+      ],
+      "outage_window_start": "2026-03-26T09:15:00Z",
+      "outage_window_end": "2026-03-26T09:45:00Z"
+    }
+  }
+}

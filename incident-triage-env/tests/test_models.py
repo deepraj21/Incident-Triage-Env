@@ -116,10 +116,40 @@ def test_action_serialization():
         severity="error",
     )
     data = action.model_dump(exclude_none=True)
-    assert data["action_type"] == "query_logs"
-    assert data["service"] == "payments-service"
-    assert data["severity"] == "error"
-    assert "keyword" not in data
+    # New tagged-union shape: {app, op, args}.
+    assert data["app"] == "obsly"
+    assert data["op"] == "query_logs"
+    assert data["args"]["service"] == "payments-service"
+    assert data["args"]["severity"] == "error"
+    assert "keyword" not in data["args"]
+    # Legacy convenience properties still work.
+    assert action.action_type == "query_logs"
+    assert action.service == "payments-service"
+
+
+def test_new_shape_action_direct():
+    action = IncidentTriageAction(
+        app="repohub",
+        op="open_pr",
+        args={
+            "target_repo": "fintra/payments-service",
+            "head_branch": "fix/npe",
+            "title": "Guard against null guest user",
+        },
+    )
+    assert action.app.value == "repohub"
+    assert action.op == "open_pr"
+    assert action.args["target_repo"] == "fintra/payments-service"
+
+
+def test_invalid_op_for_app_fails():
+    with pytest.raises(Exception):
+        IncidentTriageAction(app="obsly", op="open_pr", args={"service": "x"})
+
+
+def test_missing_required_args_fails():
+    with pytest.raises(Exception):
+        IncidentTriageAction(app="repohub", op="open_pr", args={"title": "no repo"})
 
 
 def test_root_cause_category_values():

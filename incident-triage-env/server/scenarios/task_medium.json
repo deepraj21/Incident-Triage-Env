@@ -11,38 +11,183 @@
   },
   "services": {
     "api-gateway": {
-      "dependencies": ["user-service", "cache-service"],
+      "dependencies": [
+        "user-service",
+        "cache-service"
+      ],
       "dependents": [],
       "logs": [
-        {"timestamp": "2026-03-26T10:10:00Z", "severity": "info", "message": "All backends healthy — routing normally"},
-        {"timestamp": "2026-03-26T10:15:01Z", "severity": "error", "message": "Timeout calling user-service: POST /api/users/auth — 30s deadline exceeded"},
-        {"timestamp": "2026-03-26T10:15:05Z", "severity": "error", "message": "Timeout calling user-service: GET /api/users/profile — 30s deadline exceeded"},
-        {"timestamp": "2026-03-26T10:15:10Z", "severity": "warn", "message": "Backend user-service health check failing — 3 consecutive failures"},
-        {"timestamp": "2026-03-26T10:15:30Z", "severity": "error", "message": "Request failed: GET /api/dashboard — 502 Bad Gateway (user-service unreachable)"},
-        {"timestamp": "2026-03-26T10:16:00Z", "severity": "error", "message": "Timeout calling user-service: POST /api/users/auth — connection refused"},
-        {"timestamp": "2026-03-26T10:16:30Z", "severity": "warn", "message": "Circuit breaker OPEN for user-service route — fallback to cached data"},
-        {"timestamp": "2026-03-26T10:17:00Z", "severity": "warn", "message": "30% of requests returning 5xx — PagerDuty alert triggered"}
+        {
+          "timestamp": "2026-03-26T10:10:00Z",
+          "severity": "info",
+          "message": "All backends healthy — routing normally"
+        },
+        {
+          "timestamp": "2026-03-26T10:15:01Z",
+          "severity": "error",
+          "message": "Timeout calling user-service: POST /api/users/auth — 30s deadline exceeded"
+        },
+        {
+          "timestamp": "2026-03-26T10:15:05Z",
+          "severity": "error",
+          "message": "Timeout calling user-service: GET /api/users/profile — 30s deadline exceeded"
+        },
+        {
+          "timestamp": "2026-03-26T10:15:10Z",
+          "severity": "warn",
+          "message": "Backend user-service health check failing — 3 consecutive failures"
+        },
+        {
+          "timestamp": "2026-03-26T10:15:30Z",
+          "severity": "error",
+          "message": "Request failed: GET /api/dashboard — 502 Bad Gateway (user-service unreachable)"
+        },
+        {
+          "timestamp": "2026-03-26T10:16:00Z",
+          "severity": "error",
+          "message": "Timeout calling user-service: POST /api/users/auth — connection refused"
+        },
+        {
+          "timestamp": "2026-03-26T10:16:30Z",
+          "severity": "warn",
+          "message": "Circuit breaker OPEN for user-service route — fallback to cached data"
+        },
+        {
+          "timestamp": "2026-03-26T10:17:00Z",
+          "severity": "warn",
+          "message": "30% of requests returning 5xx — PagerDuty alert triggered"
+        }
       ],
       "metrics": {
         "error_rate": [
-          {"ts": "10:10", "val": 0.2}, {"ts": "10:12", "val": 0.2}, {"ts": "10:14", "val": 0.3},
-          {"ts": "10:15", "val": 28.5}, {"ts": "10:16", "val": 30.1}, {"ts": "10:17", "val": 29.8}
+          {
+            "ts": "10:10",
+            "val": 0.2
+          },
+          {
+            "ts": "10:12",
+            "val": 0.2
+          },
+          {
+            "ts": "10:14",
+            "val": 0.3
+          },
+          {
+            "ts": "10:15",
+            "val": 28.5
+          },
+          {
+            "ts": "10:16",
+            "val": 30.1
+          },
+          {
+            "ts": "10:17",
+            "val": 29.8
+          }
         ],
         "latency_p99": [
-          {"ts": "10:10", "val": 250}, {"ts": "10:12", "val": 240}, {"ts": "10:14", "val": 260},
-          {"ts": "10:15", "val": 30000}, {"ts": "10:16", "val": 30000}, {"ts": "10:17", "val": 28000}
+          {
+            "ts": "10:10",
+            "val": 250
+          },
+          {
+            "ts": "10:12",
+            "val": 240
+          },
+          {
+            "ts": "10:14",
+            "val": 260
+          },
+          {
+            "ts": "10:15",
+            "val": 30000
+          },
+          {
+            "ts": "10:16",
+            "val": 30000
+          },
+          {
+            "ts": "10:17",
+            "val": 28000
+          }
         ],
         "cpu": [
-          {"ts": "10:10", "val": 30}, {"ts": "10:12", "val": 32}, {"ts": "10:14", "val": 31},
-          {"ts": "10:15", "val": 55}, {"ts": "10:16", "val": 58}, {"ts": "10:17", "val": 56}
+          {
+            "ts": "10:10",
+            "val": 30
+          },
+          {
+            "ts": "10:12",
+            "val": 32
+          },
+          {
+            "ts": "10:14",
+            "val": 31
+          },
+          {
+            "ts": "10:15",
+            "val": 55
+          },
+          {
+            "ts": "10:16",
+            "val": 58
+          },
+          {
+            "ts": "10:17",
+            "val": 56
+          }
         ],
         "memory": [
-          {"ts": "10:10", "val": 45}, {"ts": "10:12", "val": 45}, {"ts": "10:14", "val": 46},
-          {"ts": "10:15", "val": 48}, {"ts": "10:16", "val": 50}, {"ts": "10:17", "val": 52}
+          {
+            "ts": "10:10",
+            "val": 45
+          },
+          {
+            "ts": "10:12",
+            "val": 45
+          },
+          {
+            "ts": "10:14",
+            "val": 46
+          },
+          {
+            "ts": "10:15",
+            "val": 48
+          },
+          {
+            "ts": "10:16",
+            "val": 50
+          },
+          {
+            "ts": "10:17",
+            "val": 52
+          }
         ],
         "connections": [
-          {"ts": "10:10", "val": 150}, {"ts": "10:12", "val": 155}, {"ts": "10:14", "val": 152},
-          {"ts": "10:15", "val": 380}, {"ts": "10:16", "val": 420}, {"ts": "10:17", "val": 410}
+          {
+            "ts": "10:10",
+            "val": 150
+          },
+          {
+            "ts": "10:12",
+            "val": 155
+          },
+          {
+            "ts": "10:14",
+            "val": 152
+          },
+          {
+            "ts": "10:15",
+            "val": 380
+          },
+          {
+            "ts": "10:16",
+            "val": 420
+          },
+          {
+            "ts": "10:17",
+            "val": 410
+          }
         ]
       },
       "deploys": [],
@@ -50,43 +195,197 @@
       "status": {
         "health": "degraded",
         "uptime": "99.1%",
-        "active_alerts": ["HTTP 5xx spike", "user-service backend unhealthy"]
+        "active_alerts": [
+          "HTTP 5xx spike",
+          "user-service backend unhealthy"
+        ]
       }
     },
     "user-service": {
-      "dependencies": ["auth-db", "notification-service"],
-      "dependents": ["api-gateway"],
+      "dependencies": [
+        "auth-db",
+        "notification-service"
+      ],
+      "dependents": [
+        "api-gateway"
+      ],
       "logs": [
-        {"timestamp": "2026-03-26T10:10:00Z", "severity": "info", "message": "User service running normally — connection pool healthy"},
-        {"timestamp": "2026-03-26T10:13:00Z", "severity": "warn", "message": "Connection pool to auth-db: active=18/20, waiting=5 — pool nearly exhausted"},
-        {"timestamp": "2026-03-26T10:14:00Z", "severity": "error", "message": "Failed to acquire connection to auth-db: pool exhausted (20/20 active, 45 waiting)"},
-        {"timestamp": "2026-03-26T10:14:15Z", "severity": "error", "message": "Query timeout: SELECT * FROM users WHERE id=? — could not get connection within 10s"},
-        {"timestamp": "2026-03-26T10:14:30Z", "severity": "error", "message": "Failed to acquire connection to auth-db: pool exhausted (20/20 active, 78 waiting)"},
-        {"timestamp": "2026-03-26T10:15:00Z", "severity": "error", "message": "All auth queries failing — auth-db connection pool completely saturated"},
-        {"timestamp": "2026-03-26T10:15:30Z", "severity": "error", "message": "Request thread pool exhausted — all 200 threads blocked waiting for auth-db connections"},
-        {"timestamp": "2026-03-26T10:16:00Z", "severity": "error", "message": "Service effectively unresponsive — rejecting new requests with 503"},
-        {"timestamp": "2026-03-26T10:16:30Z", "severity": "warn", "message": "Attempting connection pool recovery — draining stale connections"}
+        {
+          "timestamp": "2026-03-26T10:10:00Z",
+          "severity": "info",
+          "message": "User service running normally — connection pool healthy"
+        },
+        {
+          "timestamp": "2026-03-26T10:13:00Z",
+          "severity": "warn",
+          "message": "Connection pool to auth-db: active=18/20, waiting=5 — pool nearly exhausted"
+        },
+        {
+          "timestamp": "2026-03-26T10:14:00Z",
+          "severity": "error",
+          "message": "Failed to acquire connection to auth-db: pool exhausted (20/20 active, 45 waiting)"
+        },
+        {
+          "timestamp": "2026-03-26T10:14:15Z",
+          "severity": "error",
+          "message": "Query timeout: SELECT * FROM users WHERE id=? — could not get connection within 10s"
+        },
+        {
+          "timestamp": "2026-03-26T10:14:30Z",
+          "severity": "error",
+          "message": "Failed to acquire connection to auth-db: pool exhausted (20/20 active, 78 waiting)"
+        },
+        {
+          "timestamp": "2026-03-26T10:15:00Z",
+          "severity": "error",
+          "message": "All auth queries failing — auth-db connection pool completely saturated"
+        },
+        {
+          "timestamp": "2026-03-26T10:15:30Z",
+          "severity": "error",
+          "message": "Request thread pool exhausted — all 200 threads blocked waiting for auth-db connections"
+        },
+        {
+          "timestamp": "2026-03-26T10:16:00Z",
+          "severity": "error",
+          "message": "Service effectively unresponsive — rejecting new requests with 503"
+        },
+        {
+          "timestamp": "2026-03-26T10:16:30Z",
+          "severity": "warn",
+          "message": "Attempting connection pool recovery — draining stale connections"
+        }
       ],
       "metrics": {
         "error_rate": [
-          {"ts": "10:10", "val": 0.1}, {"ts": "10:12", "val": 0.1}, {"ts": "10:13", "val": 2.5},
-          {"ts": "10:14", "val": 45.0}, {"ts": "10:15", "val": 85.0}, {"ts": "10:16", "val": 92.0}
+          {
+            "ts": "10:10",
+            "val": 0.1
+          },
+          {
+            "ts": "10:12",
+            "val": 0.1
+          },
+          {
+            "ts": "10:13",
+            "val": 2.5
+          },
+          {
+            "ts": "10:14",
+            "val": 45.0
+          },
+          {
+            "ts": "10:15",
+            "val": 85.0
+          },
+          {
+            "ts": "10:16",
+            "val": 92.0
+          }
         ],
         "latency_p99": [
-          {"ts": "10:10", "val": 50}, {"ts": "10:12", "val": 48}, {"ts": "10:13", "val": 5000},
-          {"ts": "10:14", "val": 10000}, {"ts": "10:15", "val": 30000}, {"ts": "10:16", "val": 30000}
+          {
+            "ts": "10:10",
+            "val": 50
+          },
+          {
+            "ts": "10:12",
+            "val": 48
+          },
+          {
+            "ts": "10:13",
+            "val": 5000
+          },
+          {
+            "ts": "10:14",
+            "val": 10000
+          },
+          {
+            "ts": "10:15",
+            "val": 30000
+          },
+          {
+            "ts": "10:16",
+            "val": 30000
+          }
         ],
         "cpu": [
-          {"ts": "10:10", "val": 25}, {"ts": "10:12", "val": 26}, {"ts": "10:13", "val": 28},
-          {"ts": "10:14", "val": 30}, {"ts": "10:15", "val": 32}, {"ts": "10:16", "val": 31}
+          {
+            "ts": "10:10",
+            "val": 25
+          },
+          {
+            "ts": "10:12",
+            "val": 26
+          },
+          {
+            "ts": "10:13",
+            "val": 28
+          },
+          {
+            "ts": "10:14",
+            "val": 30
+          },
+          {
+            "ts": "10:15",
+            "val": 32
+          },
+          {
+            "ts": "10:16",
+            "val": 31
+          }
         ],
         "memory": [
-          {"ts": "10:10", "val": 50}, {"ts": "10:12", "val": 51}, {"ts": "10:13", "val": 52},
-          {"ts": "10:14", "val": 55}, {"ts": "10:15", "val": 58}, {"ts": "10:16", "val": 60}
+          {
+            "ts": "10:10",
+            "val": 50
+          },
+          {
+            "ts": "10:12",
+            "val": 51
+          },
+          {
+            "ts": "10:13",
+            "val": 52
+          },
+          {
+            "ts": "10:14",
+            "val": 55
+          },
+          {
+            "ts": "10:15",
+            "val": 58
+          },
+          {
+            "ts": "10:16",
+            "val": 60
+          }
         ],
         "connections": [
-          {"ts": "10:10", "val": 15}, {"ts": "10:12", "val": 16}, {"ts": "10:13", "val": 20},
-          {"ts": "10:14", "val": 20}, {"ts": "10:15", "val": 20}, {"ts": "10:16", "val": 20}
+          {
+            "ts": "10:10",
+            "val": 15
+          },
+          {
+            "ts": "10:12",
+            "val": 16
+          },
+          {
+            "ts": "10:13",
+            "val": 20
+          },
+          {
+            "ts": "10:14",
+            "val": 20
+          },
+          {
+            "ts": "10:15",
+            "val": 20
+          },
+          {
+            "ts": "10:16",
+            "val": 20
+          }
         ]
       },
       "deploys": [],
@@ -94,44 +393,199 @@
       "status": {
         "health": "unhealthy",
         "uptime": "97.5%",
-        "active_alerts": ["Connection pool exhaustion", "High error rate"]
+        "active_alerts": [
+          "Connection pool exhaustion",
+          "High error rate"
+        ]
       }
     },
     "auth-db": {
       "dependencies": [],
-      "dependents": ["user-service"],
+      "dependents": [
+        "user-service"
+      ],
       "logs": [
-        {"timestamp": "2026-03-26T10:00:00Z", "severity": "info", "message": "Database server started — max_connections=200"},
-        {"timestamp": "2026-03-26T10:05:00Z", "severity": "info", "message": "Config reload triggered by ops-bob via admin console"},
-        {"timestamp": "2026-03-26T10:05:01Z", "severity": "warn", "message": "Configuration changed: max_connections 200 -> 20 (reload source: admin console)"},
-        {"timestamp": "2026-03-26T10:05:02Z", "severity": "info", "message": "Killing 180 excess connections to enforce new max_connections=20"},
-        {"timestamp": "2026-03-26T10:05:05Z", "severity": "warn", "message": "180 connections terminated — 20 remaining"},
-        {"timestamp": "2026-03-26T10:10:00Z", "severity": "info", "message": "Connection count: 18/20 — approaching limit"},
-        {"timestamp": "2026-03-26T10:13:00Z", "severity": "warn", "message": "Connection limit reached: 20/20 — rejecting new connections"},
-        {"timestamp": "2026-03-26T10:14:00Z", "severity": "warn", "message": "Connection limit reached: 20/20 — 45 connections queued"},
-        {"timestamp": "2026-03-26T10:15:00Z", "severity": "warn", "message": "Connection limit reached: 20/20 — 120 connections queued, queue overflow imminent"},
-        {"timestamp": "2026-03-26T10:16:00Z", "severity": "error", "message": "Connection queue overflow — dropping new connection requests"}
+        {
+          "timestamp": "2026-03-26T10:00:00Z",
+          "severity": "info",
+          "message": "Database server started — max_connections=200"
+        },
+        {
+          "timestamp": "2026-03-26T10:05:00Z",
+          "severity": "info",
+          "message": "Config reload triggered by ops-bob via admin console"
+        },
+        {
+          "timestamp": "2026-03-26T10:05:01Z",
+          "severity": "warn",
+          "message": "Configuration changed: max_connections 200 -> 20 (reload source: admin console)"
+        },
+        {
+          "timestamp": "2026-03-26T10:05:02Z",
+          "severity": "info",
+          "message": "Killing 180 excess connections to enforce new max_connections=20"
+        },
+        {
+          "timestamp": "2026-03-26T10:05:05Z",
+          "severity": "warn",
+          "message": "180 connections terminated — 20 remaining"
+        },
+        {
+          "timestamp": "2026-03-26T10:10:00Z",
+          "severity": "info",
+          "message": "Connection count: 18/20 — approaching limit"
+        },
+        {
+          "timestamp": "2026-03-26T10:13:00Z",
+          "severity": "warn",
+          "message": "Connection limit reached: 20/20 — rejecting new connections"
+        },
+        {
+          "timestamp": "2026-03-26T10:14:00Z",
+          "severity": "warn",
+          "message": "Connection limit reached: 20/20 — 45 connections queued"
+        },
+        {
+          "timestamp": "2026-03-26T10:15:00Z",
+          "severity": "warn",
+          "message": "Connection limit reached: 20/20 — 120 connections queued, queue overflow imminent"
+        },
+        {
+          "timestamp": "2026-03-26T10:16:00Z",
+          "severity": "error",
+          "message": "Connection queue overflow — dropping new connection requests"
+        }
       ],
       "metrics": {
         "error_rate": [
-          {"ts": "10:05", "val": 0.0}, {"ts": "10:10", "val": 0.0}, {"ts": "10:13", "val": 5.0},
-          {"ts": "10:14", "val": 25.0}, {"ts": "10:15", "val": 60.0}, {"ts": "10:16", "val": 75.0}
+          {
+            "ts": "10:05",
+            "val": 0.0
+          },
+          {
+            "ts": "10:10",
+            "val": 0.0
+          },
+          {
+            "ts": "10:13",
+            "val": 5.0
+          },
+          {
+            "ts": "10:14",
+            "val": 25.0
+          },
+          {
+            "ts": "10:15",
+            "val": 60.0
+          },
+          {
+            "ts": "10:16",
+            "val": 75.0
+          }
         ],
         "latency_p99": [
-          {"ts": "10:05", "val": 5}, {"ts": "10:10", "val": 6}, {"ts": "10:13", "val": 500},
-          {"ts": "10:14", "val": 2000}, {"ts": "10:15", "val": 5000}, {"ts": "10:16", "val": 10000}
+          {
+            "ts": "10:05",
+            "val": 5
+          },
+          {
+            "ts": "10:10",
+            "val": 6
+          },
+          {
+            "ts": "10:13",
+            "val": 500
+          },
+          {
+            "ts": "10:14",
+            "val": 2000
+          },
+          {
+            "ts": "10:15",
+            "val": 5000
+          },
+          {
+            "ts": "10:16",
+            "val": 10000
+          }
         ],
         "cpu": [
-          {"ts": "10:05", "val": 15}, {"ts": "10:10", "val": 16}, {"ts": "10:13", "val": 18},
-          {"ts": "10:14", "val": 17}, {"ts": "10:15", "val": 16}, {"ts": "10:16", "val": 15}
+          {
+            "ts": "10:05",
+            "val": 15
+          },
+          {
+            "ts": "10:10",
+            "val": 16
+          },
+          {
+            "ts": "10:13",
+            "val": 18
+          },
+          {
+            "ts": "10:14",
+            "val": 17
+          },
+          {
+            "ts": "10:15",
+            "val": 16
+          },
+          {
+            "ts": "10:16",
+            "val": 15
+          }
         ],
         "memory": [
-          {"ts": "10:05", "val": 40}, {"ts": "10:10", "val": 38}, {"ts": "10:13", "val": 35},
-          {"ts": "10:14", "val": 33}, {"ts": "10:15", "val": 32}, {"ts": "10:16", "val": 31}
+          {
+            "ts": "10:05",
+            "val": 40
+          },
+          {
+            "ts": "10:10",
+            "val": 38
+          },
+          {
+            "ts": "10:13",
+            "val": 35
+          },
+          {
+            "ts": "10:14",
+            "val": 33
+          },
+          {
+            "ts": "10:15",
+            "val": 32
+          },
+          {
+            "ts": "10:16",
+            "val": 31
+          }
         ],
         "connections": [
-          {"ts": "10:05", "val": 20}, {"ts": "10:10", "val": 18}, {"ts": "10:13", "val": 20},
-          {"ts": "10:14", "val": 20}, {"ts": "10:15", "val": 20}, {"ts": "10:16", "val": 20}
+          {
+            "ts": "10:05",
+            "val": 20
+          },
+          {
+            "ts": "10:10",
+            "val": 18
+          },
+          {
+            "ts": "10:13",
+            "val": 20
+          },
+          {
+            "ts": "10:14",
+            "val": 20
+          },
+          {
+            "ts": "10:15",
+            "val": 20
+          },
+          {
+            "ts": "10:16",
+            "val": 20
+          }
         ]
       },
       "deploys": [
@@ -148,39 +602,173 @@
       "status": {
         "health": "degraded",
         "uptime": "99.9%",
-        "active_alerts": ["Connection limit reached"]
+        "active_alerts": [
+          "Connection limit reached"
+        ]
       }
     },
     "cache-service": {
       "dependencies": [],
-      "dependents": ["api-gateway"],
+      "dependents": [
+        "api-gateway"
+      ],
       "logs": [
-        {"timestamp": "2026-03-26T10:10:00Z", "severity": "info", "message": "Cache hit rate: 94.2% — operating normally"},
-        {"timestamp": "2026-03-26T10:15:00Z", "severity": "warn", "message": "Cache hit rate dropped to 78.5% — elevated miss rate"},
-        {"timestamp": "2026-03-26T10:15:30Z", "severity": "info", "message": "Increased backend requests due to cache misses — latency elevated"},
-        {"timestamp": "2026-03-26T10:16:00Z", "severity": "warn", "message": "Cache hit rate: 72.1% — user session data expiring faster than expected"},
-        {"timestamp": "2026-03-26T10:17:00Z", "severity": "info", "message": "Memory usage stable — eviction policy working as designed"}
+        {
+          "timestamp": "2026-03-26T10:10:00Z",
+          "severity": "info",
+          "message": "Cache hit rate: 94.2% — operating normally"
+        },
+        {
+          "timestamp": "2026-03-26T10:15:00Z",
+          "severity": "warn",
+          "message": "Cache hit rate dropped to 78.5% — elevated miss rate"
+        },
+        {
+          "timestamp": "2026-03-26T10:15:30Z",
+          "severity": "info",
+          "message": "Increased backend requests due to cache misses — latency elevated"
+        },
+        {
+          "timestamp": "2026-03-26T10:16:00Z",
+          "severity": "warn",
+          "message": "Cache hit rate: 72.1% — user session data expiring faster than expected"
+        },
+        {
+          "timestamp": "2026-03-26T10:17:00Z",
+          "severity": "info",
+          "message": "Memory usage stable — eviction policy working as designed"
+        }
       ],
       "metrics": {
         "error_rate": [
-          {"ts": "10:10", "val": 0.0}, {"ts": "10:12", "val": 0.0}, {"ts": "10:14", "val": 0.1},
-          {"ts": "10:15", "val": 0.2}, {"ts": "10:16", "val": 0.3}, {"ts": "10:17", "val": 0.2}
+          {
+            "ts": "10:10",
+            "val": 0.0
+          },
+          {
+            "ts": "10:12",
+            "val": 0.0
+          },
+          {
+            "ts": "10:14",
+            "val": 0.1
+          },
+          {
+            "ts": "10:15",
+            "val": 0.2
+          },
+          {
+            "ts": "10:16",
+            "val": 0.3
+          },
+          {
+            "ts": "10:17",
+            "val": 0.2
+          }
         ],
         "latency_p99": [
-          {"ts": "10:10", "val": 2}, {"ts": "10:12", "val": 2}, {"ts": "10:14", "val": 3},
-          {"ts": "10:15", "val": 8}, {"ts": "10:16", "val": 12}, {"ts": "10:17", "val": 10}
+          {
+            "ts": "10:10",
+            "val": 2
+          },
+          {
+            "ts": "10:12",
+            "val": 2
+          },
+          {
+            "ts": "10:14",
+            "val": 3
+          },
+          {
+            "ts": "10:15",
+            "val": 8
+          },
+          {
+            "ts": "10:16",
+            "val": 12
+          },
+          {
+            "ts": "10:17",
+            "val": 10
+          }
         ],
         "cpu": [
-          {"ts": "10:10", "val": 20}, {"ts": "10:12", "val": 21}, {"ts": "10:14", "val": 22},
-          {"ts": "10:15", "val": 28}, {"ts": "10:16", "val": 30}, {"ts": "10:17", "val": 29}
+          {
+            "ts": "10:10",
+            "val": 20
+          },
+          {
+            "ts": "10:12",
+            "val": 21
+          },
+          {
+            "ts": "10:14",
+            "val": 22
+          },
+          {
+            "ts": "10:15",
+            "val": 28
+          },
+          {
+            "ts": "10:16",
+            "val": 30
+          },
+          {
+            "ts": "10:17",
+            "val": 29
+          }
         ],
         "memory": [
-          {"ts": "10:10", "val": 70}, {"ts": "10:12", "val": 71}, {"ts": "10:14", "val": 72},
-          {"ts": "10:15", "val": 73}, {"ts": "10:16", "val": 74}, {"ts": "10:17", "val": 74}
+          {
+            "ts": "10:10",
+            "val": 70
+          },
+          {
+            "ts": "10:12",
+            "val": 71
+          },
+          {
+            "ts": "10:14",
+            "val": 72
+          },
+          {
+            "ts": "10:15",
+            "val": 73
+          },
+          {
+            "ts": "10:16",
+            "val": 74
+          },
+          {
+            "ts": "10:17",
+            "val": 74
+          }
         ],
         "connections": [
-          {"ts": "10:10", "val": 80}, {"ts": "10:12", "val": 82}, {"ts": "10:14", "val": 85},
-          {"ts": "10:15", "val": 95}, {"ts": "10:16", "val": 100}, {"ts": "10:17", "val": 98}
+          {
+            "ts": "10:10",
+            "val": 80
+          },
+          {
+            "ts": "10:12",
+            "val": 82
+          },
+          {
+            "ts": "10:14",
+            "val": 85
+          },
+          {
+            "ts": "10:15",
+            "val": 95
+          },
+          {
+            "ts": "10:16",
+            "val": 100
+          },
+          {
+            "ts": "10:17",
+            "val": 98
+          }
         ]
       },
       "deploys": [],
@@ -193,32 +781,136 @@
     },
     "notification-service": {
       "dependencies": [],
-      "dependents": ["user-service"],
+      "dependents": [
+        "user-service"
+      ],
       "logs": [
-        {"timestamp": "2026-03-26T10:10:00Z", "severity": "info", "message": "Notification queue: 12 pending, 0 failed — processing normally"},
-        {"timestamp": "2026-03-26T10:15:00Z", "severity": "info", "message": "Notification queue: 8 pending, 0 failed — processing normally"},
-        {"timestamp": "2026-03-26T10:16:00Z", "severity": "info", "message": "Email delivery rate: 99.8% — all systems nominal"}
+        {
+          "timestamp": "2026-03-26T10:10:00Z",
+          "severity": "info",
+          "message": "Notification queue: 12 pending, 0 failed — processing normally"
+        },
+        {
+          "timestamp": "2026-03-26T10:15:00Z",
+          "severity": "info",
+          "message": "Notification queue: 8 pending, 0 failed — processing normally"
+        },
+        {
+          "timestamp": "2026-03-26T10:16:00Z",
+          "severity": "info",
+          "message": "Email delivery rate: 99.8% — all systems nominal"
+        }
       ],
       "metrics": {
         "error_rate": [
-          {"ts": "10:10", "val": 0.0}, {"ts": "10:12", "val": 0.0}, {"ts": "10:14", "val": 0.0},
-          {"ts": "10:15", "val": 0.0}, {"ts": "10:16", "val": 0.0}
+          {
+            "ts": "10:10",
+            "val": 0.0
+          },
+          {
+            "ts": "10:12",
+            "val": 0.0
+          },
+          {
+            "ts": "10:14",
+            "val": 0.0
+          },
+          {
+            "ts": "10:15",
+            "val": 0.0
+          },
+          {
+            "ts": "10:16",
+            "val": 0.0
+          }
         ],
         "latency_p99": [
-          {"ts": "10:10", "val": 30}, {"ts": "10:12", "val": 28}, {"ts": "10:14", "val": 32},
-          {"ts": "10:15", "val": 29}, {"ts": "10:16", "val": 31}
+          {
+            "ts": "10:10",
+            "val": 30
+          },
+          {
+            "ts": "10:12",
+            "val": 28
+          },
+          {
+            "ts": "10:14",
+            "val": 32
+          },
+          {
+            "ts": "10:15",
+            "val": 29
+          },
+          {
+            "ts": "10:16",
+            "val": 31
+          }
         ],
         "cpu": [
-          {"ts": "10:10", "val": 10}, {"ts": "10:12", "val": 11}, {"ts": "10:14", "val": 10},
-          {"ts": "10:15", "val": 12}, {"ts": "10:16", "val": 11}
+          {
+            "ts": "10:10",
+            "val": 10
+          },
+          {
+            "ts": "10:12",
+            "val": 11
+          },
+          {
+            "ts": "10:14",
+            "val": 10
+          },
+          {
+            "ts": "10:15",
+            "val": 12
+          },
+          {
+            "ts": "10:16",
+            "val": 11
+          }
         ],
         "memory": [
-          {"ts": "10:10", "val": 30}, {"ts": "10:12", "val": 30}, {"ts": "10:14", "val": 31},
-          {"ts": "10:15", "val": 31}, {"ts": "10:16", "val": 31}
+          {
+            "ts": "10:10",
+            "val": 30
+          },
+          {
+            "ts": "10:12",
+            "val": 30
+          },
+          {
+            "ts": "10:14",
+            "val": 31
+          },
+          {
+            "ts": "10:15",
+            "val": 31
+          },
+          {
+            "ts": "10:16",
+            "val": 31
+          }
         ],
         "connections": [
-          {"ts": "10:10", "val": 5}, {"ts": "10:12", "val": 6}, {"ts": "10:14", "val": 5},
-          {"ts": "10:15", "val": 5}, {"ts": "10:16", "val": 6}
+          {
+            "ts": "10:10",
+            "val": 5
+          },
+          {
+            "ts": "10:12",
+            "val": 6
+          },
+          {
+            "ts": "10:14",
+            "val": 5
+          },
+          {
+            "ts": "10:15",
+            "val": 5
+          },
+          {
+            "ts": "10:16",
+            "val": 6
+          }
         ]
       },
       "deploys": [],
@@ -276,10 +968,187 @@
     "root_cause_service": "auth-db",
     "root_cause_category": "config_change",
     "remediation": "fix_config",
-    "causal_chain": ["auth-db", "user-service", "api-gateway"],
-    "red_herrings": ["cache-service"],
-    "evidence_services": ["auth-db", "user-service", "api-gateway"],
-    "anomalous_services": ["api-gateway", "user-service", "auth-db", "cache-service"],
-    "failure_family": "change-induced"
+    "causal_chain": [
+      "auth-db",
+      "user-service",
+      "api-gateway"
+    ],
+    "red_herrings": [
+      "cache-service"
+    ],
+    "evidence_services": [
+      "auth-db",
+      "user-service",
+      "api-gateway"
+    ],
+    "anomalous_services": [
+      "api-gateway",
+      "user-service",
+      "auth-db",
+      "cache-service"
+    ],
+    "failure_family": "change-induced",
+    "correct_pr": {
+      "target_repo": "fintra/auth-db",
+      "touched_files": [
+        "auth_db_config.yaml",
+        "connection_pool.py"
+      ],
+      "keywords": [
+        "config",
+        "connection",
+        "pool",
+        "auth"
+      ]
+    },
+    "correct_blast_radius": {
+      "affected_services": [
+        "auth-db",
+        "user-service",
+        "api-gateway"
+      ],
+      "estimated_requests_failed": 5000,
+      "missed_regions": [],
+      "outage_window_start": "2026-03-26T14:32:00Z",
+      "outage_window_end": "2026-03-26T14:50:00Z"
+    }
+  },
+  "clock": {
+    "start": "2026-03-26T14:32:00Z",
+    "step_seconds": 30
+  },
+  "tags": [],
+  "timeline": [
+    {
+      "at_step": 4,
+      "event": "new_log",
+      "service": "user-service",
+      "payload": {
+        "severity": "error",
+        "message": "auth-db connection pool exhausted (retry 3/3)"
+      }
+    },
+    {
+      "at_step": 7,
+      "event": "slo_burn",
+      "service": "api-gateway",
+      "payload": {
+        "burn_rate_x": 8.0
+      }
+    },
+    {
+      "at_step": 10,
+      "event": "new_deploy",
+      "service": "auth-db",
+      "payload": {
+        "author": "sre-carla",
+        "diff_summary": "rollback attempt"
+      }
+    },
+    {
+      "at_step": 12,
+      "event": "oncall_handoff",
+      "payload": {
+        "from": "alice-sre",
+        "to": "bob-sre"
+      }
+    }
+  ],
+  "policies": [
+    {
+      "id": "page-before-rollback",
+      "when": {
+        "app": "system",
+        "op": "submit_diagnosis",
+        "args_match": {
+          "remediation": "rollback_deploy"
+        }
+      },
+      "require_prior": {
+        "app": "chatops",
+        "op": "page_oncall"
+      },
+      "require_prior_within_steps": 10,
+      "penalty": -0.2,
+      "bonus": 0.1
+    },
+    {
+      "id": "comment-on-ticket",
+      "when": {
+        "app": "system",
+        "op": "submit_diagnosis"
+      },
+      "require_prior": {
+        "app": "ticketdesk",
+        "op": "add_comment"
+      },
+      "penalty": 0.0,
+      "bonus": 0.05
+    }
+  ],
+  "alerthub": {
+    "alerts": [
+      {
+        "id": "PG-ALERT-2",
+        "service": "api-gateway",
+        "message": "SLO burn 4x threshold on api-gateway /login — cascading",
+        "severity": "critical",
+        "fire_time": "2026-03-26T14:32:00Z"
+      }
+    ]
+  },
+  "chatops": {
+    "oncall_lead": "alice-sre",
+    "channels": {
+      "incidents": [
+        {
+          "user": "alice-sre",
+          "ts": "14:32",
+          "text": "api-gateway SLO burn firing"
+        },
+        {
+          "user": "bob-sre",
+          "ts": "14:35",
+          "text": "auth flow complaints across user-service"
+        }
+      ]
+    }
+  },
+  "ticketdesk": {
+    "tickets": [
+      {
+        "id": "INC-1002",
+        "title": "Login SLO burn on api-gateway",
+        "body": "Users report intermittent auth failures; escalated to sev1",
+        "severity": "sev1",
+        "status": "open"
+      }
+    ]
+  },
+  "obsly": {
+    "traces": {
+      "trace-login-1": {
+        "trace_id": "trace-login-1",
+        "duration_ms": 4050,
+        "spans": [
+          {
+            "name": "api-gateway.POST /login",
+            "ms": 4050,
+            "status": "error"
+          },
+          {
+            "name": "user-service.authenticate",
+            "ms": 4020,
+            "status": "error"
+          },
+          {
+            "name": "auth-db.query",
+            "ms": 4000,
+            "status": "timeout",
+            "error": "connection pool exhausted"
+          }
+        ]
+      }
+    }
   }
 }

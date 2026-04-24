@@ -38,6 +38,9 @@ class GraderResponse(BaseModel):
     task_id: str
     score: float
     breakdown: dict
+    heads: dict = {}
+    effective_weights: dict = {}
+    policy_summary: dict = {}
     diagnosis_submitted: bool
 
 
@@ -46,10 +49,23 @@ async def grade_episode(req: GraderRequest):
     episode = get_episode(req.episode_id)
     if episode is None:
         raise HTTPException(status_code=404, detail=f"Episode {req.episode_id} not found")
+    gs = episode.get("grader_score") or {}
+    # Flatten heads into a breakdown dict for backwards compat with Round-1 clients.
+    heads = gs.get("heads", {})
+    flat_breakdown = {
+        name: (h.get("score") if isinstance(h, dict) else None)
+        for name, h in heads.items()
+    }
+    # Also fold in the diagnosis sub-breakdown if present (Round-1 shape).
+    if isinstance(heads.get("diagnosis"), dict):
+        flat_breakdown.update(heads["diagnosis"].get("breakdown", {}))
     return GraderResponse(
         task_id=episode["task_id"],
-        score=episode["grader_score"]["score"] if episode.get("grader_score") else 0.0,
-        breakdown=episode["grader_score"]["breakdown"] if episode.get("grader_score") else {},
+        score=gs.get("score", 0.0),
+        breakdown=flat_breakdown,
+        heads=heads,
+        effective_weights=gs.get("effective_weights", {}),
+        policy_summary=episode.get("policy_summary") or {},
         diagnosis_submitted=episode.get("diagnosis_submitted", False),
     )
 
