@@ -14,12 +14,19 @@ TASK_FILES = {
     "hard_region_failover": "task_region_failover.json",
     "hard_freeze_violation": "task_freeze_violation.json",
     "expert_stealth_regression": "task_stealth_regression.json",
+    # Tier A scenarios — process-hygiene failures.
+    "medium_uat_skipped": "task_uat_skipped.json",
+    "hard_pr_quality_breach": "task_pr_quality_breach.json",
 }
 
 # Held-out split — never used for GRPO training, reserved for before/after eval.
+# Tier A's hard_pr_quality_breach is added to eval because it exercises a
+# genuinely novel signal (CI gate + waived-finding detection) that training on
+# the simpler UAT scenario cannot leak into.
 EVAL_TASK_IDS = {
     "hard_multi_signal_cascade",
     "expert_stealth_regression",
+    "hard_pr_quality_breach",
 }
 
 TRAIN_TASK_IDS = [tid for tid in TASK_FILES if tid not in EVAL_TASK_IDS]

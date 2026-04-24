@@ -1,0 +1,9 @@
+task_id,seed,steps,score,diagnosis,policy,blast,pr
+easy_single_service_failure,,5,0.7824,0.5561,0.8,1.0,1.0
+medium_cascading_dependency,,5,0.849,0.6225,1.0,1.0,1.0
+hard_multi_signal_cascade,,5,0.852,0.6299,1.0,1.0,1.0
+hard_region_failover,,6,0.829,0.5725,1.0,1.0,1.0
+hard_freeze_violation,,6,0.7865,0.4662,1.0,1.0,1.0
+expert_stealth_regression,,5,0.832,0.5799,1.0,1.0,1.0
+medium_uat_skipped,,6,0.7854,0.4634,1.0,1.0,1.0
+hard_pr_quality_breach,,6,0.789,0.4725,1.0,1.0,1.0

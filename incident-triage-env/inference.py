@@ -61,10 +61,12 @@ TRAIN_TASK_IDS = [
     "medium_cascading_dependency",
     "hard_region_failover",
     "hard_freeze_violation",
+    "medium_uat_skipped",
 ]
 EVAL_TASK_IDS = [
     "hard_multi_signal_cascade",
     "expert_stealth_regression",
+    "hard_pr_quality_breach",
 ]
 ALL_TASK_IDS = TRAIN_TASK_IDS + EVAL_TASK_IDS
 
