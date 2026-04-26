@@ -2,6 +2,8 @@
 
 *April'2026. Hackathon weekend ~36hrs*
 
+**Watch the video demo:** https://youtu.be/SCXsNVwRhrs
+
 I want to walk through what I built, why I built it the way I did, and the things that mattered (and the things that very much didn't) when teaching a 1.5B-parameter Qwen to behave like a half-decent oncall engineer.
 
 This is a long post. There are diagrams. There are tradeoffs I had to make and would do differently next time. If you only have two minutes, read the section called **"Why per-step grading is the entire point"** and skip the rest.
@@ -304,29 +306,6 @@ Adapter is on the Hub: [`AbhishekMallick/incident-triage-grpo-train`](https://hu
 
 ---
 
-## Things I'd do differently
-
-I'm proud of this thing, but I'm honest about what wasn't great:
-
-- **I overspent on debug cycles before pivoting to SFT.** I should have started with SFT, established a baseline, *then* tried GRPO on top. The "RL is the right answer for everything" reflex cost me about three hours of T4 time.
-- **The reward curve for SFT is too clean.** With 40 examples and oracle targets, the model basically memorises. A larger trajectory dataset (100+ varied agents at varying skill levels, not just oracle) would produce a more honest learning curve and probably better generalisation. Future work.
-- **The Gradio UI shipped with two version-incompat issues** I missed during local testing because the local Gradio version wasn't pinned. Lesson: pin `gradio` exactly in `pyproject.toml`, don't trust "compatible release" semantics across versions of a frontend library.
-- **My multi-app surface is broad but shallow.** Each app has 3-7 ops. A real hackathon-grade env would let you `obsly.create_dashboard` or `repohub.review_pr_comments` — operations that have side-effects the agent has to reason about. I have the skeleton for those; I didn't have time to flesh them out.
-
-If I were doing this from scratch again, I'd start with the policy engine. That was the single highest-leverage component — once declarative rules existed, I could spin up a new "process-hygiene gate" scenario in 30 minutes. Everything else is downstream of having a clean rule DSL.
-
----
-
-## What I think this proves
-
-The narrow claim: a small (1.5B) language model can be taught to do non-trivial multi-tool reasoning, against a dynamic environment, with 218 seconds of SFT + a $0.04 budget, achieving **+102 %** on held-out tasks.
-
-The broader claim: **OpenEnv's contract is a really good substrate for this kind of work**. The fact that I could deploy the same env code to a HF Space (CPU, free, public-facing) AND a separate training Space (GPU, billed, training-only) AND run it locally for dev — all from the same `git push` to different branches — is the kind of operational ergonomics that makes RL projects shippable in a weekend.
-
-I also think the **per-step grading** angle deserves more attention in the RL agent space generally. Sparse terminal rewards work for games where you have unlimited rollouts. They fall apart in domains where each rollout is expensive (real APIs, real datasets, real money). Dense per-step grading lets you train with 100x fewer rollouts. Worth the extra design effort up front.
-
----
-
 ## Links
 
 | | |
@@ -337,35 +316,6 @@ I also think the **per-step grading** angle deserves more attention in the RL ag
 | **Trained adapter — Qwen2.5-1.5B SFT** | https://huggingface.co/AbhishekMallick/incident-triage-grpo-train |
 | **Trained adapter — Qwen2.5-3B SFT** | https://huggingface.co/AbhishekMallick/incident-triage-grpo-train-Qwen3B |
 | **Trained adapter — Qwen2.5-7B SFT** | https://huggingface.co/AbhishekMallick/incident-triage-sft-train-Qwen2.5-7B |
-
-## Reproduce my work
-
-```bash
-git clone https://github.com/deepraj21/Incident-Triage-Env
-cd Incident-Triage-Env
-pip install -e ".[training]"
-
-# SFT — the cheap, fast, reliable stage
-python scripts/train_sft.py \
-    --model Qwen/Qwen2.5-1.5B-Instruct --lora-r 16 \
-    --num-epochs 3 --seeds 0 1 2 3 4 5 6 7 \
-    --output-dir ./trained/sft
-
-# GRPO refinement — optional, on top of the SFT adapter
-python scripts/train_grpo.py \
-    --model Qwen/Qwen2.5-1.5B-Instruct --lora-r 16 \
-    --num-iters 100 --group-size 4 \
-    --seeds 0 1 2 3 \
-    --output-dir ./trained/grpo
-
-# Evaluate
-python scripts/eval_before_after.py --label baseline   --seeds 0 1 2 3 4
-python scripts/eval_before_after.py --label finetuned  --seeds 0 1 2 3 4
-python scripts/eval_before_after.py --compare baseline finetuned
-
-# Render plots
-python scripts/plot_model.py
-```
 
 The same training script works for the 3B and 7B base models — just change `--model` to `Qwen/Qwen2.5-3B-Instruct` or `Qwen/Qwen2.5-7B-Instruct`. All three trained adapters are public on the Hub (links above).
 

@@ -27,10 +27,11 @@ tags:
 |---|---|
 | 🌐 **Live Environment (HF Space)** | https://huggingface.co/spaces/AbhishekMallick/incident-triage-env |
 | 💻 **Source (GitHub)** | https://github.com/deepraj21/Incident-Triage-Env |
-| 📓 **Training notebook (Colab)** | https://colab.research.google.com/drive/10dHOtRzLHY3aMSc21hxQouLxTi_gXv-t#scrollTo=train |
+| 📓 **Training notebook (Colab)** | https://colab.research.google.com/drive/10dHOtRzLHY3aMSc21hxQouLxTi_gXv-t |
 | 🤗 **Trained adapter — Qwen2.5-1.5B SFT** | https://huggingface.co/AbhishekMallick/incident-triage-grpo-train |
 | 🤗 **Trained adapter — Qwen2.5-3B SFT** | https://huggingface.co/AbhishekMallick/incident-triage-grpo-train-Qwen3B |
 | 🤗 **Trained adapter — Qwen2.5-7B SFT** | https://huggingface.co/AbhishekMallick/incident-triage-sft-train-Qwen2.5-7B |
+| 🎬 **YouTube demo** | https://youtu.be/SCXsNVwRhrs |
 | 📝 **Blog write-up** | [`Blog.md`](BLOG.md) / [Medium](https://medium.com/@mallickabhishek97/building-an-openenv-compliant-incident-triage-environment-for-rl-what-i-learned-along-the-way-3a39b0917862) |
 
 ---
@@ -332,6 +333,17 @@ The biggest lifts are on **structured outputs** (`pr` and `blast`) — exactly w
 | ![Radar — baseline](https://github.com/deepraj21/Incident-Triage-Env/blob/feat/incident-triage-env/incident-triage-env/docs/benchmarks/per_head_radar_baseline-hf.png?raw=true) | ![Radar — trained](https://github.com/deepraj21/Incident-Triage-Env/blob/feat/incident-triage-env/incident-triage-env/docs/benchmarks/per_head_radar_finetuned-sft.png?raw=true) |
 
 ---
+
+## Training evidences
+
+| Baseline inference evidence | Trained inference evidence |
+|---|---|
+| **Run 1**<br/>![Baseline inference test 1](https://2wkbkfzt7fnhqdoh.public.blob.vercel-storage.com/baseline-inference-test-1.png) | **Run 1**<br/>![Trained inference test 1](https://2wkbkfzt7fnhqdoh.public.blob.vercel-storage.com/trained-inference-test-1.png) |
+| **Run 2**<br/>![Baseline inference test 2](https://2wkbkfzt7fnhqdoh.public.blob.vercel-storage.com/baseline-inference-test-2.png) | **Run 2**<br/>![Trained inference test 2](https://2wkbkfzt7fnhqdoh.public.blob.vercel-storage.com/trained-inference-test-2.png) |
+
+| Training process evidence | Adapter publish evidence |
+|---|---|
+| ![Training logs](https://2wkbkfzt7fnhqdoh.public.blob.vercel-storage.com/training-logs.png) | ![Qwen adapter pull](https://2wkbkfzt7fnhqdoh.public.blob.vercel-storage.com/qwen-adaptor-pull.png) |
 
 ## Trained models
 
