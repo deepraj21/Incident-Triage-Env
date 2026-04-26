@@ -533,91 +533,153 @@ You'll receive an alert and the world-clock starts ticking</p></div>""",
 
         # ---------------------------- About
         gr.Markdown("---")
-        with gr.Accordion("About this environment", open=False):
-            gr.Markdown(f"""
+        with gr.Accordion("About this environment", open=True):
+            gr.Markdown("""
 **Theme**: World Modeling — Professional Tasks (Theme 3.1) + Scaler AI Labs bonus (Multi-App Enterprise Workflows).
+
+#### Links
+
+| Resource | URL |
+|---|---|
+| Live HF Space (this env) | https://huggingface.co/spaces/AbhishekMallick/incident-triage-env |
+| GitHub source | https://github.com/deepraj21/Incident-Triage-Env |
+| Blog write-up (HF) | https://huggingface.co/spaces/AbhishekMallick/incident-triage-env/blob/main/BLOG.md |
+| Blog write-up (Medium) | https://medium.com/@mallickabhishek97/building-an-openenv-compliant-incident-triage-environment-for-rl-what-i-learned-along-the-way-3a39b0917862 |
+| Colab training notebook | https://colab.research.google.com/drive/10dHOtRzLHY3aMSc21hxQouLxTi_gXv-t#scrollTo=train |
+| Trained adapter — Qwen2.5-1.5B SFT | https://huggingface.co/AbhishekMallick/incident-triage-grpo-train |
+| Trained adapter — Qwen2.5-3B SFT | https://huggingface.co/AbhishekMallick/incident-triage-grpo-train-Qwen3B |
+| Trained adapter — Qwen2.5-7B SFT | https://huggingface.co/AbhishekMallick/incident-triage-sft-train-Qwen2.5-7B |
+
+#### Architecture at a glance
+
+System architecture · episode lifecycle · app dispatcher → real-world enterprise tools:
+
+![System architecture](https://qmplv4qr76dicsvw.public.blob.vercel-storage.com/incident-triage/incident-triage.jpeg)
+
+![Episode lifecycle](https://qmplv4qr76dicsvw.public.blob.vercel-storage.com/incident-triage/episode-lifecycle.jpeg)
+
+![App dispatcher → real enterprise tools](https://qmplv4qr76dicsvw.public.blob.vercel-storage.com/incident-triage/env.jpeg)
 
 #### Why it exists
 Production incident triage is the canonical SRE task: alert fires, you investigate across services,
 form hypotheses under time pressure, take remediation. This env captures that full lifecycle —
 plus the **process-hygiene gates** (UAT, CI quality, change-freeze) that surround the on-call work itself.
 
-#### What's in the box
+#### Grading happens per step — not just at the end
+Every `step()` returns a reward. Three sources grade each action:
 
-**8 scenarios across 4 tiers + 1 process-hygiene tier**
+1. **`InvestigationRubric`** — informational value of the action (direct evidence ≫ causal-chain ≫ contextual ≫ redundant; bonuses for following the dependency chain, penalties for chasing red herrings, repeat-query damping at 3+ visits).
+2. **`PolicyEngine`** — declarative business rules fire **per step** with `+` deltas for compliance (e.g. paged on-call before submitting rollback) and `−` deltas for violations (e.g. opened a forward-fix PR during change-freeze). The chip on the right shows the live delta.
+3. **Terminal `CompositeScorer`** — only runs on `submit_diagnosis`. It is the **cap**, not the only signal. The 4 horizontal bars below show its head-by-head decomposition.
 
-| Tier | Scenarios |
-|---|---|
-| Easy | single-service NPE |
-| Medium | cascading config change |
-| Hard | multi-signal cascade · region failover · change-freeze rollback-only |
-| Expert | silent metric drift (no error logs) |
-| Tier A — process hygiene | UAT-bypassed regression · waived Snyk finding shipped |
+This is what makes the env trainable in 100 GRPO steps instead of 10,000: the reward landscape is dense and interpretable from step 1.
 
-3 scenarios are **held-out for eval** (`hard_multi_signal_cascade`,
-`expert_stealth_regression`, `hard_pr_quality_breach`).
-The other 5 are training-split with seed-variant generation
-(~80 effective prompts/epoch).
+#### Scenarios — 8 total, 3 held-out for eval
 
-**6 enterprise apps** wrapping the surface an SRE actually touches:
-`alerthub` (PagerDuty-shaped) · `obsly` (Datadog-shaped) ·
-`repohub` (GitHub-shaped, with simulated Snyk/Sonar/Raven CI gates) ·
-`ticketdesk` (Jira-shaped) · `chatops` (Slack-shaped) ·
-`uatsim` (pre-prod sign-off simulator).
+| Task | Tier | Steps | Family | Split |
+|---|---|---|---|---|
+| `easy_single_service_failure` | Easy | 10 | bad_deploy NPE | train |
+| `medium_cascading_dependency` | Medium | 15 | config_change cascade | train |
+| `hard_multi_signal_cascade` | Hard | 20 | resource_exhaustion + red herrings | **eval** |
+| `hard_region_failover` | Hard | 18 | config_change (failover_enabled=false) | train |
+| `hard_freeze_violation` | Hard | 15 | bad_deploy during change-freeze | train |
+| `expert_stealth_regression` | Expert | 20 | silent metric drift (no error logs) | **eval** |
+| `medium_uat_skipped` (Tier A) | Medium | 14 | UAT-bypassed bad_deploy | train |
+| `hard_pr_quality_breach` (Tier A) | Hard | 18 | waived Snyk finding shipped past failed CI | **eval** |
 
-**Dynamic world engine** — `WorldClock` advances sim-time per step,
-`EventQueue` fires scheduled new logs / new alerts / new deploys /
-oncall-handoffs / SLO-burns mid-episode. Some events are silent
-(`visible:false`) so the agent must re-poll to notice.
+Each scenario carries: `clock` (sim-time anchor), `tags`, full services graph, `timeline` of mid-episode events, declarative `policies`, multi-app state blocks (alerthub / chatops / ticketdesk / obsly / repohub / uatsim), and ground-truth including `correct_pr` + `correct_blast_radius`. Seed variants (5 train tasks × 8 seeds) deterministically perturb red-herring ordering, timestamp jitter, and oncall lead names while preserving ground truth — yielding ~40 distinct training prompts.
 
-**PolicyEngine** — declarative business rules with `require_prior`,
-`require_prior_within_steps`, `forbidden_if(scenario_tag=…)`,
-`max_occurrences`. Reward delta + violation list surfaced per step.
+#### App dispatcher — 6 enterprise apps + system
 
-**4-head composite grader**
+| App | Modeled after | Ops |
+|---|---|---|
+| `alerthub` | PagerDuty | `list_alerts` (clock-aware), `get_alert`, `ack_alert` |
+| `obsly` | Datadog | `query_logs`, `query_metric`, `get_trace`, `list_dashboards`, `check_status`, `trace_dependencies` |
+| `repohub` | GitHub + CI | `recent_commits`, `get_diff`, `get_file`, `list_files`, `get_blame`, `open_pr`, `ci_check`, `list_pr_history` |
+| `ticketdesk` | Jira | `search_tickets`, `get_ticket`, `create_incident`, `link_pr`, `add_comment` |
+| `chatops` | Slack | `post_update`, `read_channel`, `page_oncall` |
+| `uatsim` (Tier A) | pre-prod gate | `list_stages`, `get_stage`, `get_signoff_status`, `check_uat_record` |
+| `system` | – | `submit_diagnosis` |
+
+`repohub.ci_check` returns a synthetic Snyk/Sonar/Raven/coverage report; `uatsim.check_uat_record` exposes whether a service deploy bypassed required UAT stages. Both are scenario-driven so policies can enforce process-hygiene rules at the operational layer.
+
+#### Dynamic world engine
+
+- **`WorldClock`** — deterministic step-based sim-time. Every `step()` advances by `step_seconds` (default 30 s).
+- **`EventQueue`** — fires timeline events at the configured step. Five types: `new_log`, `new_alert`, `new_deploy`, `oncall_handoff`, `slo_burn`.
+- Events with `visible: false` mutate the world *without* surfacing on `obs.world_events` — the agent must re-poll to discover them. This is the substrate for the stealth-regression scenario.
+
+#### PolicyEngine — declarative DSL
+
+Each scenario opts into rules via tags. Supported predicates:
+
+- `args_match` — match action arguments (e.g. `remediation: rollback_deploy`)
+- `require_prior` — a prior action of `{app, op}` must exist
+- `require_prior_within_steps: N` — prior action must be within last N steps
+- `max_occurrences: N` — no more than N times this episode
+- `forbidden_if: { scenario_tag: "..." }` — tag-gated bans (e.g. forward-fix PR during `change_freeze`)
+- `penalty` / `bonus` — per-step delta, signed
+
+The same engine produces both the per-step `policy_delta_this_step` (for shaping during RL training) and the `compliance_score` head used in terminal grading.
+
+#### 4-head composite grader
 
 | Head | Weight | Signal |
 |---|---|---|
-| diagnosis | 0.40 | root cause service · category · remediation · evidence quality · efficiency |
-| policy | 0.20 | compliance with declared scenario policies (no violations / earned bonuses) |
-| blast | 0.20 | F1 on affected services & missed regions, log-tolerant requests-failed, IoU on outage window |
-| pr | 0.20 | structured PR proposal: target repo · touched-files coverage · keyword coverage · structural validity |
+| **diagnosis** | 0.40 | root_cause_service exact match (one-hop partial) · category exact (same-family partial) · remediation match · evidence-coverage proportion · efficiency · shotgun/circular/destructive penalties |
+| **policy** | 0.20 | `1 − (violations · weight / total_attempts)` from `PolicyEngine.summary()` |
+| **blast** | 0.20 | F1 on `affected_services` × 0.40 + F1 on `missed_regions` × 0.20 + log-tolerant magnitude on `estimated_requests_failed` × 0.20 + IoU on outage window × 0.20 |
+| **pr** | 0.20 | exact `target_repo` × 0.30 + recall over `touched_files` × 0.35 + keyword coverage in title/summary × 0.25 + structural validity × 0.10 |
 
-Weights are **redistributed proportionally** when a head is inapplicable
-(e.g. a scenario has no `correct_pr` ground truth → its weight rolls into
-diagnosis + policy).
+**Inapplicable heads redistribute their weight** — if a scenario has no `correct_pr` ground truth, the PR head's 0.20 rolls into diagnosis + policy + blast proportionally. Final score clamped to `(0.001, 0.999)`.
 
-#### Pipeline
+#### Training pipeline (SFT → GRPO)
+
 ```
-env  →  rollouts  →  composite reward  →  GRPO update  →  LoRA adapter
-                                                              ↓
-              before/after eval against held-out split  ←  serve via vLLM
+oracle trajectories (40 = 5 tasks × 8 seeds)
+        │
+        ▼
+TRL SFTTrainer + LoRA r=16, 3 epochs        ──── stage 1 (218 s on T4)
+        │
+        ▼
+17.5 MB LoRA adapter
+        │
+        ▼
+TRL GRPOTrainer + replay-and-grade reward   ──── stage 2 (~50 min on T4)
+        │
+        ▼
+refined adapter  ⭢  HF Hub  ⭢  before/after eval on held-out split
 ```
-Training script: `scripts/train_grpo.py` (TRL · LoRA · Qwen2.5-1.5B/3B).
-Before/after harness: `scripts/eval_before_after.py --compare BEFORE AFTER`.
-Plot helpers: `scripts/plot_results.py`.
+
+Same script targets Qwen2.5-1.5B / 3B / 7B by changing the `MODEL_NAME` env var. All three trained adapter sizes are linked at the top.
+
+#### Held-out eval results (3 scenarios × 5 seeds)
+
+| Task | Baseline | Trained (SFT+GRPO) | Δ |
+|---|---:|---:|---:|
+| `hard_multi_signal_cascade` | 0.400 | 0.747 | +0.347 |
+| `expert_stealth_regression` | 0.391 | 0.800 | +0.410 |
+| `hard_pr_quality_breach` | 0.336 | 0.726 | +0.390 |
+| **OVERALL** | **0.375** | **0.758** | **+0.382 (+102 %)** |
+
+Per-head: diagnosis +0.20 · policy ±0 · blast +0.68 · pr +0.82.
 
 #### Reproduce
+
 ```bash
-# clone the env
-git clone https://huggingface.co/spaces/AbhishekMallick/incident-triage-env
+git clone https://github.com/deepraj21/Incident-Triage-Env
+cd Incident-Triage-Env
+pip install -e ".[training]"
 
-# run locally
-docker build -t triage-env . && docker run --rm -p 8000:8000 triage-env
+python scripts/train_sft.py --model Qwen/Qwen2.5-1.5B-Instruct \\
+    --num-epochs 3 --seeds 0 1 2 3 4 5 6 7 \\
+    --output-dir ./trained/sft
 
-# or hit the live API
-import websockets, json
-async with websockets.connect(
-        "wss://AbhishekMallick-incident-triage-env.hf.space/ws") as ws:
-    await ws.send(json.dumps({{"type": "reset",
-                                "data": {{"task_id": "easy_single_service_failure"}}}}))
-    obs = json.loads(await ws.recv())
+python scripts/eval_before_after.py --compare baseline finetuned
+python scripts/plot_model.py
 ```
 
-Tests: 150 passing. Endpoints: `GET /tasks` · `WS /ws` · `POST /grader`.
-
-Trained adapter (when available):
-[`AbhishekMallick/incident-triage-grpo`](https://huggingface.co/AbhishekMallick/incident-triage-grpo).
+150 tests passing. Endpoints: `GET /tasks` · `WS /ws` · `POST /grader` · `POST /reset` · `POST /step` · `GET /state` · `POST /mcp`.
 """)
 
         # --------------------------- wiring
