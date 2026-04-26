@@ -5,6 +5,7 @@ Produces three PNGs into docs/benchmarks/:
   1. oracle_ceiling.png           — per-scenario oracle ceiling (bar chart)
   2. per_head_radar_<label>.png   — per-head mean radar for an eval artifact
   3. before_after_<a>_vs_<b>.png  — per-task before/after + delta bars
+  4. reward_curve_<run>.png       — per-iteration reward / loss / KL during GRPO
 
 Usage:
   # just the oracle ceiling (always available after benchmark_env.py)
@@ -15,6 +16,10 @@ Usage:
 
   # before/after delta
   python scripts/plot_results.py --compare baseline finetuned
+
+  # reward curve from a training run (reads reward_curve.csv inside the
+  # adapter directory pulled from the Model repo)
+  python scripts/plot_results.py --reward-curve ./trained/grpo-hf
 """
 
 from __future__ import annotations
@@ -180,6 +185,49 @@ def plot_before_after(before_label: str, after_label: str) -> Path:
     return out
 
 
+# ---------------------------------------------------------------- reward curve
+
+def plot_reward_curve(adapter_dir: str) -> Path:
+    """Read reward_curve.csv (written by train_grpo.py) and render the curve."""
+    src = Path(adapter_dir) / "reward_curve.csv"
+    if not src.exists():
+        raise SystemExit(f"reward_curve.csv not found in {adapter_dir}. "
+                         "Run training first or pull the adapter from your Model repo.")
+    rows = list(csv.DictReader(src.open()))
+    steps = [int(r["step"]) for r in rows]
+    rewards = [float(r["reward"]) for r in rows if r["reward"]]
+    losses = [float(r["loss"]) for r in rows if r.get("loss")]
+    kls = [float(r["kl"]) for r in rows if r.get("kl")]
+
+    fig, axes = plt.subplots(1, 3, figsize=(14, 4))
+
+    axes[0].plot(steps[:len(rewards)], rewards, "o-", color="#2A9D8F", linewidth=1.6)
+    axes[0].set_title("GRPO mean reward per step")
+    axes[0].set_xlabel("step")
+    axes[0].set_ylabel("reward")
+    axes[0].grid(alpha=0.3)
+
+    axes[1].plot(steps[:len(losses)], losses, "o-", color="#E76F51", linewidth=1.6)
+    axes[1].set_title("Policy loss")
+    axes[1].set_xlabel("step")
+    axes[1].set_ylabel("loss")
+    axes[1].grid(alpha=0.3)
+
+    axes[2].plot(steps[:len(kls)], kls, "o-", color="#7E57C2", linewidth=1.6)
+    axes[2].set_title("KL to reference")
+    axes[2].set_xlabel("step")
+    axes[2].set_ylabel("KL")
+    axes[2].grid(alpha=0.3)
+
+    fig.suptitle(f"Training run — {Path(adapter_dir).name}", y=1.02)
+    fig.tight_layout()
+    label = Path(adapter_dir).name or "run"
+    out = PLOTS_DIR / f"reward_curve_{label}.png"
+    fig.savefig(out, dpi=140, bbox_inches="tight")
+    plt.close(fig)
+    return out
+
+
 # ---------------------------------------------------------------- CLI
 
 def main():
@@ -190,6 +238,8 @@ def main():
                    help="plot per-head radar for a given eval artifact label")
     p.add_argument("--compare", nargs=2, metavar=("BEFORE", "AFTER"),
                    help="plot before/after comparison for two eval artifacts")
+    p.add_argument("--reward-curve", type=str, default=None,
+                   help="path to a trained adapter dir containing reward_curve.csv")
     args = p.parse_args()
 
     produced = []
@@ -199,6 +249,8 @@ def main():
         produced.append(plot_per_head_radar(args.radar))
     if args.compare:
         produced.append(plot_before_after(args.compare[0], args.compare[1]))
+    if args.reward_curve:
+        produced.append(plot_reward_curve(args.reward_curve))
 
     if not produced:
         # Default: always attempt the oracle plot (it's cheap and always useful).

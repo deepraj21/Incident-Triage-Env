@@ -162,35 +162,16 @@ Kaggle gives 30 hrs/week of free P100 time — more than enough for a proper run
 
 ## 5. HF Spaces — hackathon day
 
-On the 25th/26th you get HF compute credits. Use ZeroGPU for dev, reserve persistent GPU for the final run.
+On the 25th/26th you get HF compute credits. The full walkthrough lives in **`docs/HF_DEPLOY.md`** — this section is the 30-second version.
 
-### 5.1 Create the training Space
+### 5.1 Training Space setup
 
-1. **New Space** → SDK: `Docker` → Hardware: `A10G` (or higher if available).
-2. Add a `Dockerfile`:
+The repo ships **`Dockerfile.train`** which is pre-configured to run `scripts/train_grpo.py` with all knobs as env vars.
 
-   ```Dockerfile
-   FROM pytorch/pytorch:2.3.0-cuda12.1-cudnn8-runtime
-   WORKDIR /app
-   COPY . .
-   RUN pip install -e . && \
-       pip install "trl>=0.15" "peft>=0.11" "transformers>=4.44" \
-                   datasets accelerate bitsandbytes vllm
-   ENV HF_HOME=/data/.cache
-   CMD ["python", "scripts/train_grpo.py", \
-        "--model", "Qwen/Qwen2.5-3B-Instruct", \
-        "--lora-r", "32", "--lora-alpha", "64", \
-        "--num-iters", "500", "--group-size", "8", \
-        "--seeds", "0", "1", "2", "3", "4", "5", "6", "7", "8", "9", \
-        "--batch-size", "1", "--grad-accum", "8", \
-        "--max-new-tokens", "768", \
-        "--learning-rate", "3e-6", "--beta", "0.04", \
-        "--output-dir", "/data/grpo-hf"]
-   ```
-
-3. **Enable persistent storage** (Space settings → Persistent disk) and point `--output-dir` at `/data/...` so your adapter survives restarts.
-
-4. Push. The Space auto-builds and runs.
+1. Create a Space: **SDK: Docker → Hardware: A10G small** (≈$1.05/hr).
+2. **Enable persistent storage** in Space settings (50 GB) — required so `/data/grpo-hf` survives restarts.
+3. Push your `hf-train` branch (see `docs/HF_DEPLOY.md` §4.2 for the `dockerfile_path` patching trick).
+4. Set training hyperparams in **Settings → Variables**: `MODEL_NAME`, `LORA_R`, `NUM_ITERS`, `GROUP_SIZE`, etc. — all have sensible defaults baked in the Dockerfile.
 
 ### 5.2 Serve the adapter from a second Space
 

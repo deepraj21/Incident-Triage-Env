@@ -1,0 +1,19 @@
+# Python
+__pycache__/
+*.pyc
+*.egg-info/
+.pytest_cache/
+
+# Mac
+.DS_Store
+
+# Local-only artifacts
+trained/
+.env
+
+# Internal benchmarking helper — not for the public repo
+scripts/benchmarker.py
+scripts/eval_artifacts/
+
+hf-deploy/
+understand_pitch.md

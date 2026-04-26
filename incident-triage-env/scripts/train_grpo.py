@@ -268,6 +268,12 @@ def main() -> None:
     model = AutoModelForCausalLM.from_pretrained(
         args.model, torch_dtype=dtype, trust_remote_code=True,
     )
+    # CRITICAL for PEFT + gradient checkpointing: register a forward hook on
+    # the embeddings so their output has requires_grad=True. Without this, the
+    # gradient graph is severed at the frozen base-layer boundary and the
+    # backward pass fails with "element 0 of tensors does not require grad".
+    if hasattr(model, "enable_input_require_grads"):
+        model.enable_input_require_grads()
 
     peft_config = LoraConfig(
         r=args.lora_r,
@@ -306,7 +312,12 @@ def main() -> None:
         max_steps=args.num_iters,
         bf16=(device == "cuda"),
         fp16=(device == "mps"),
-        gradient_checkpointing=(device == "cuda"),  # MPS support is flaky
+        # Required on T4 — without checkpointing Qwen-1.5B + GRPO group=4
+        # hits 14+ GB activation memory and OOMs. The grad-flow problem this
+        # used to cause is now handled by model.enable_input_require_grads()
+        # above, so checkpointing + PEFT cooperate cleanly.
+        gradient_checkpointing=(device == "cuda"),
+        gradient_checkpointing_kwargs={"use_reentrant": False},
         report_to=os.environ.get("GRPO_REPORT_TO", "none"),
         remove_unused_columns=False,  # preserve task_id / seed columns for the reward fn
     )
@@ -323,6 +334,80 @@ def main() -> None:
     trainer.save_model(args.output_dir)
     tokenizer.save_pretrained(args.output_dir)
     print(f"[train_grpo] adapter saved → {args.output_dir}")
+
+    # --------------- post-training: push to HF Model repo + dump reward curve
+
+    # Reward curve: TRL writes per-step metrics to trainer_state.json. Extract
+    # the reward column into a tiny CSV so plot_results.py can render it
+    # without reading the giant state file.
+    state_path = Path(args.output_dir) / "trainer_state.json"
+    if state_path.exists():
+        try:
+            state = json.loads(state_path.read_text())
+            curve_rows = []
+            for entry in state.get("log_history", []):
+                step = entry.get("step")
+                if step is None:
+                    continue
+                # TRL puts the GRPO reward under several possible keys
+                # depending on version; try them in order.
+                reward = (
+                    entry.get("reward")
+                    or entry.get("rewards/_reward/mean")
+                    or entry.get("reward/mean")
+                )
+                if reward is None:
+                    continue
+                curve_rows.append({
+                    "step": step,
+                    "reward": float(reward),
+                    "loss": entry.get("loss"),
+                    "kl": entry.get("kl"),
+                })
+            if curve_rows:
+                curve_path = Path(args.output_dir) / "reward_curve.csv"
+                with curve_path.open("w") as f:
+                    cols = ["step", "reward", "loss", "kl"]
+                    f.write(",".join(cols) + "\n")
+                    for r in curve_rows:
+                        f.write(",".join(
+                            str(r.get(c)) if r.get(c) is not None else ""
+                            for c in cols
+                        ) + "\n")
+                print(f"[train_grpo] reward curve → {curve_path}  "
+                      f"({len(curve_rows)} steps)")
+        except Exception as e:
+            print(f"[train_grpo] WARN — could not extract reward curve: {e}")
+
+    # Push LoRA adapter + curve to a Model repo so it survives the Space's
+    # death. The Space itself is ephemeral compute; the Model repo is where
+    # the artifact actually lives long-term.
+    hub_repo = os.environ.get("HUB_REPO")
+    hub_token = os.environ.get("HUB_TOKEN") or os.environ.get("HF_TOKEN")
+    if hub_repo:
+        if not hub_token:
+            print("[train_grpo] WARN — HUB_REPO set but no HUB_TOKEN/HF_TOKEN; skipping push")
+        else:
+            try:
+                from huggingface_hub import HfApi  # noqa: WPS433
+                api = HfApi(token=hub_token)
+                api.create_repo(repo_id=hub_repo, repo_type="model",
+                                  private=False, exist_ok=True)
+                api.upload_folder(
+                    folder_path=args.output_dir,
+                    repo_id=hub_repo,
+                    repo_type="model",
+                    commit_message=f"GRPO adapter — {args.model} @ {args.num_iters} iters, "
+                                   f"group={args.group_size}, seeds={args.seeds}",
+                )
+                print(f"[train_grpo] adapter pushed to https://huggingface.co/{hub_repo}")
+                print("[train_grpo] DONE — safe to pause this Space now.")
+            except Exception as e:
+                print(f"[train_grpo] ERROR — Hub push failed: {e}")
+                print(f"[train_grpo] adapter is still at {args.output_dir} on this Space")
+    else:
+        print("[train_grpo] no HUB_REPO env var — adapter not pushed.")
+        print(f"[train_grpo] artifact at {args.output_dir} (ephemeral on Space)")
 
 
 if __name__ == "__main__":

@@ -1,0 +1,103 @@
+# Training Dockerfile — runs scripts/train_grpo.py as the HF Space entrypoint.
+#
+# Deploy this as a *separate* HF Space with GPU hardware (A10G minimum for
+# Qwen-3B; T4 is fine for Qwen-0.5B/1.5B). Persistent storage at /data is
+# mounted by HF when you enable it in Space settings — training artifacts
+# (LoRA adapters, trainer_state.json, checkpoints) land there and survive
+# Space restarts.
+#
+# All training knobs are passed via env vars so you can reconfigure the run
+# in the HF Space UI without rebuilding the image:
+#   MODEL_NAME, LORA_R, NUM_ITERS, GROUP_SIZE, BATCH_SIZE, GRAD_ACCUM,
+#   LEARNING_RATE, BETA, SEEDS, MAX_NEW_TOKENS, OUTPUT_DIR
+FROM pytorch/pytorch:2.4.0-cuda12.1-cudnn9-runtime
+
+ENV PYTHONUNBUFFERED=1 \
+    PIP_NO_CACHE_DIR=1 \
+    PIP_DISABLE_PIP_VERSION_CHECK=1 \
+    HF_HOME=/data/.hf-cache \
+    HF_HUB_ENABLE_HF_TRANSFER=1 \
+    PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True
+
+WORKDIR /app
+
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends git curl \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install env package first (cache-friendly), then heavy ML stack separately.
+COPY pyproject.toml README.md ./
+COPY server/__init__.py ./server/
+COPY models.py ./
+RUN pip install -e ".[baseline]"
+
+# Heavy ML stack — isolated so rebuilds on scenario changes don't redownload.
+# Versions pinned to a known-good combo: TRL ≥0.18 imports FSDPModule which
+# requires torch ≥2.5; base image has torch 2.4. TRL 0.15.x avoids that path.
+RUN pip install \
+        "transformers==4.46.3" \
+        "trl==0.15.2" \
+        "peft==0.13.2" \
+        "datasets>=2.20" \
+        "accelerate>=0.34,<1.0" \
+        bitsandbytes \
+        hf_transfer
+
+COPY . .
+
+# Training defaults.
+# Two training modes — toggle via the TRAIN_MODE env var:
+#   TRAIN_MODE=sft    → fast, stable supervised fine-tuning on oracle trajectories
+#                       (~10 min on T4, recommended default for hackathon)
+#   TRAIN_MODE=grpo   → full GRPO RL (~50 min on T4 if it fits, 25 min on A10G)
+#
+# HUB_REPO + HUB_TOKEN — set both to push the LoRA adapter to a Model repo
+# at end-of-training. Recommended pattern: persistent storage OFF on the
+# Space → adapter survives via the Hub upload, not via /data.
+ENV TRAIN_MODE=sft \
+    MODEL_NAME=Qwen/Qwen2.5-1.5B-Instruct \
+    LORA_R=16 \
+    LORA_ALPHA=32 \
+    NUM_EPOCHS=3 \
+    NUM_ITERS=40 \
+    GROUP_SIZE=2 \
+    BATCH_SIZE=4 \
+    GRAD_ACCUM=2 \
+    LEARNING_RATE=2e-4 \
+    BETA=0.04 \
+    SEEDS="0 1 2 3 4 5 6 7" \
+    MAX_NEW_TOKENS=384 \
+    MAX_SEQ_LENGTH=1024 \
+    OUTPUT_DIR=/tmp/train-out \
+    HUB_REPO="" \
+    HUB_TOKEN=""
+
+# If you DO enable persistent storage, set OUTPUT_DIR=/data/grpo-hf via Space
+# Variables. With HUB_REPO set, persistent storage is unnecessary — the adapter
+# uploads to your Model repo and the Space can be paused/deleted safely.
+VOLUME /tmp/grpo-out
+
+# Branch on TRAIN_MODE — same image, two scripts.
+CMD ["sh", "-c", "\
+    if [ \"$TRAIN_MODE\" = \"grpo\" ]; then \
+        python scripts/train_grpo.py \
+            --model \"$MODEL_NAME\" \
+            --lora-r \"$LORA_R\" --lora-alpha \"$LORA_ALPHA\" \
+            --num-iters \"$NUM_ITERS\" \
+            --group-size \"$GROUP_SIZE\" \
+            --batch-size \"$BATCH_SIZE\" --grad-accum \"$GRAD_ACCUM\" \
+            --learning-rate \"$LEARNING_RATE\" --beta \"$BETA\" \
+            --seeds $SEEDS \
+            --max-new-tokens \"$MAX_NEW_TOKENS\" \
+            --output-dir \"$OUTPUT_DIR\"; \
+    else \
+        python scripts/train_sft.py \
+            --model \"$MODEL_NAME\" \
+            --lora-r \"$LORA_R\" --lora-alpha \"$LORA_ALPHA\" \
+            --num-epochs \"$NUM_EPOCHS\" \
+            --batch-size \"$BATCH_SIZE\" --grad-accum \"$GRAD_ACCUM\" \
+            --learning-rate \"$LEARNING_RATE\" \
+            --max-seq-length \"$MAX_SEQ_LENGTH\" \
+            --seeds $SEEDS \
+            --output-dir \"$OUTPUT_DIR\"; \
+    fi"]
